@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { HNSWLib } from "langchain/vectorstores/hnswlib";
+import { UnstructuredDirectoryLoader } from "langchain/document_loaders/fs/unstructured";
+import { UnstructuredLoader } from "langchain/document_loaders/fs/unstructured";
 import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 import { TextLoader } from "langchain/document_loaders/fs/text";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
@@ -8,6 +10,7 @@ import { EPubLoader } from "langchain/document_loaders/fs/epub";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import path from "path";
+import fs from "fs";
 
 const metadataDictionary = {
   a_revolutionary_method_of_dynamic_psychotherapy: {
@@ -62,6 +65,12 @@ const metadataDictionary = {
     author: "Nancy McWilliams",
     isbn: 1609184947,
   },
+  psychoneurotic_disorders: {
+    title:
+      "Intensive Short-Term Dynamic Psychotherapy: Spectrum of Psychoneurotic Disorders",
+    author: "Habib Davanloo",
+    isbn: 123456789012,
+  },
 };
 
 export const vectorRouter = createTRPCRouter({
@@ -70,21 +79,74 @@ export const vectorRouter = createTRPCRouter({
       // Load documents
       // See https://js.langchain.com/docs/modules/indexes/document_loaders/examples/file_loaders/directory
       const sourceDirectoryPath = path.join(process.cwd(), "documents");
-      const loader = new DirectoryLoader(path.join(sourceDirectoryPath), {
-        ".pdf": (sourceDirectoryPath) =>
-          new PDFLoader(sourceDirectoryPath, { splitPages: true }),
-        ".txt": (sourceDirectoryPath) => new TextLoader(sourceDirectoryPath),
-        ".epub": (sourceDirectoryPath) =>
-          new EPubLoader(sourceDirectoryPath, {
-            splitChapters: false,
-          }),
-      });
+      //
+      // const body = new FormData();
+      // const file = fs.readFileSync(
+      //   sourceDirectoryPath + "/psychoneurotic_disorders.pdf",
+      //   "binary"
+      // );
+      //
+      // body.append("files", file);
+      // body.append("strategy", "hi_res");
+      // console.log(body);
+
+      // fetch("http://localhost:8000/general/v0/general", {
+      //   body,
+      //   headers: {
+      //     Accept: "application/json",
+      //     // "Content-Type": "multipart/form-data",
+      //   },
+      //   method: "POST",
+      // })
+      // .then((res) => res.json())
+      // .then((json) => console.log(json));
+
+      // curl -X 'POST' 'http://localhost:8000/general/v0/general' -H 'accept: application/json' -H 'Content-Type: multipart/form-data' -F 'files=@documents/psychoneurotic_disorders.pdf' -F 'strategy=hi_res'
+
+      console.info("Create loader");
+
+      // const loader = new UnstructuredLoader(
+      //   path.join(sourceDirectoryPath + "/attachment_in_psychotherapy.pdf"),
+      //   {
+      //     // apiUrl: "http://localhost:8000",
+      //     apiUrl: "https://api.unstructured.io/general/v0/general",
+      //     apiKey: "L521L3G5ERyfMsYGMmjpi2HJLlWwQE",
+      //     strategy: "fast",
+      //     // strategy: "hi_res",
+      //   }
+      // );
+
+      // const loader = new PDFLoader(
+      //   sourceDirectoryPath + "/attachment_in_psychotherapy.pdf"
+      // );
+
+      // const loader = new DirectoryLoader(path.join(sourceDirectoryPath), {
+      //   ".pdf": (sourceDirectoryPath) =>
+      //     new PDFLoader(sourceDirectoryPath, { splitPages: true }),
+      //   ".txt": (sourceDirectoryPath) => new TextLoader(sourceDirectoryPath),
+      //   ".epub": (sourceDirectoryPath) =>
+      //     new EPubLoader(sourceDirectoryPath, {
+      //       splitChapters: false,
+      //     }),
+      // });
+
+      const loader = new UnstructuredDirectoryLoader(
+        path.join(sourceDirectoryPath),
+        {
+          // apiUrl: "http://localhost:8000",
+          apiKey: "L521L3G5ERyfMsYGMmjpi2HJLlWwQE",
+          strategy: "auto",
+        }
+      );
 
       const docs = await loader.load();
+
+      // return;
 
       console.info("Add custom metadata to documents");
 
       docs.forEach((document) => {
+        console.log(document);
         // Extract file name
         const file = document.metadata.source.split("/").pop().split(".")[0];
 
