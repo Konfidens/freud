@@ -12,7 +12,7 @@ import { vectorRouter } from "./routers/vectorstore";
 export const appRouter = createTRPCRouter({
   example: exampleRouter,
   openai: openAIRouter,
-  // langchain: langchainRouter,
+  langchain: langchainRouter,
   vectorstore: vectorRouter,
 });
 
