@@ -27,7 +27,7 @@ function textToFollowUps(str: string | undefined): string[] {
     for (let j = 0; j < str.length ; j++ ){
       if (str[j] == i.toString()){
         start_found = true;
-        start_index = j + 2;
+        start_index = j + 3;
       } 
       if (str[j] == "?" && start_found) {
         question = str.substring(start_index, j + 1);
@@ -143,14 +143,12 @@ export const langchainRouter = createTRPCRouter({
         // Follow up questions (only testing):
         let context_string = "";
         sources.map((s) => {context_string += s.content;})
-        const followup_prompt = `Based on the following, previous answer to a question, create three followup questions that a psychatrist could ask. You should only give the the three questions and nothing else.
-        However, if the answer says 'I don't know' or similar, look at the context instead and ask three questions that are very related to this context, again as if the questions could be asked by a psychiatrist.
+        const followup_prompt = `Based on the following, previous answer to a question, create three follow-up questions that are asked as if you were a professional psychiatrist asking another professional for guidance or info. You should only give the the three questions and nothing else.
+        However, if the answer says 'I don't know' or similar, ask three very general questions about psychology subject matter, again as if you were a professional psychiatrist  asking another professional for guidance or info.
         
         Previous answer: ${reply.content}
-        
-        Context: ${context_string}
-        
-        Three follow-up questions on the strict form: 'Follow-up question one.\nFollow-up question two.\nFollow-up question three.'`; 
+
+        Three follow-up questions on the strict form: '1. Follow-up question one.\n2. Follow-up question two.\n3. Follow-up question three.'`; 
 
         const questions_response = await model.call(followup_prompt);
         const generated_followup_questions = textToFollowUps(questions_response);
