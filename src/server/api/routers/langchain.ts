@@ -14,22 +14,23 @@ import { Message, Role, type Source } from "~/interfaces/message";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 // Kristian testing follow up questions:
-import { FollowUps } from "~/interfaces/followup";
 
 function textToFollowUps(str: string | undefined): string[] {
   if (str == undefined) {
     return [];
   }
   const followUpQuestions: string[] = [];
-  let counter = 0;
-  for (let i = 0; i < 3 ; i++){
+  for (let i = 1; i < 4 ; i++){
     let question = "";
-    for (let j = counter; counter < str.length ; j++ ){
-      if (str[j] != '\n'){
-        question += str[j];
+    let start_found = false;
+    let start_index = 0;
+    for (let j = 0; j < str.length ; j++ ){
+      if (str[j] == i.toString()){
+        start_found = true;
+        start_index = j + 2;
       } 
-      else {
-        counter = j + 1;
+      if (str[j] == "?" && start_found) {
+        question = str.substring(start_index, j + 1);
         followUpQuestions.push(question);
         break;
       }
@@ -77,7 +78,7 @@ const embeddings = new OpenAIEmbeddings();
 
 const vectorStore = await WeaviateStore.fromExistingIndex(embeddings, {
   client,
-  indexName: "ISTDP_initial",
+  indexName: "ISTDP", // sto _initial også eller no, før
   metadataKeys: ["source", "author", "title", "pageNumber"],
 });
 
@@ -142,14 +143,14 @@ export const langchainRouter = createTRPCRouter({
         // Follow up questions (only testing):
         let context_string = "";
         sources.map((s) => {context_string += s.content;})
-        const followup_prompt = `Based on the following, previous answer to a question, create three followup questions. You should only give the the three questions and nothing else. 
-However, if the answer is saying 'I don't know' or similar, look at the context instead and ask three questions that are very related to this context.
-                            
-Previous answer: {reply.content}
-                            
-Context: {context_string}
-                            
-Three follow-up questions on the strict form: '\n1. Follow-up question one.\n2. Follow-up question two.\n3. Follow-up question three.'`; 
+        const followup_prompt = `Based on the following, previous answer to a question, create three followup questions that a psychatrist could ask. You should only give the the three questions and nothing else.
+        However, if the answer says 'I don't know' or similar, look at the context instead and ask three questions that are very related to this context, again as if the questions could be asked by a psychiatrist.
+        
+        Previous answer: ${reply.content}
+        
+        Context: ${context_string}
+        
+        Three follow-up questions on the strict form: 'Follow-up question one.\nFollow-up question two.\nFollow-up question three.'`; 
 
         const questions_response = await model.call(followup_prompt);
         const generated_followup_questions = textToFollowUps(questions_response);

@@ -53,7 +53,7 @@ export default function Home() {
     },
   });
 
-  const vectorStoreStatistics = api.weaviate.stats.useQuery();
+  // const vectorStoreStatistics = api.weaviate.stats.useQuery();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,7 +106,7 @@ export default function Home() {
         >
           <div className="m-10">
             <b>Statistikk fra databasen</b>
-            {vectorStoreStatistics.isLoading
+            {/* {vectorStoreStatistics.isLoading
               ? "Venter på databasen..."
               : vectorStoreStatistics.data.map((data, idx) => {
                 return (
@@ -114,7 +114,7 @@ export default function Home() {
                     {data.author}: {data.count}
                   </p>
                 );
-              })}
+              })} */}
             <div className="pt-5">
               <Button
                 size={"small"}
