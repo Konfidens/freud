@@ -13,6 +13,31 @@ import { z } from "zod";
 import { Message, Role, type Source } from "~/interfaces/message";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
+// Kristian testing follow up questions:
+import { FollowUps } from "~/interfaces/followup";
+
+function textToFollowUps(str: string | undefined): string[] {
+  if (str == undefined) {
+    return [];
+  }
+  const followUpQuestions: string[] = [];
+  let counter = 0;
+  for (let i = 0; i < 3 ; i++){
+    let question = "";
+    for (let j = counter; counter < str.length ; j++ ){
+      if (str[j] != '\n'){
+        question += str[j];
+      } 
+      else {
+        counter = j + 1;
+        followUpQuestions.push(question);
+        break;
+      }
+    }
+  }
+  return followUpQuestions;
+}
+
 // Specify language model, embeddings and prompts
 const model = new OpenAI({
   callbacks: [new ConsoleCallbackHandler()],
@@ -113,6 +138,22 @@ export const langchainRouter = createTRPCRouter({
           content: res.text,
           sources: sources,
         };
+
+        // Follow up questions (only testing):
+        let context_string = "";
+        sources.map((s) => {context_string += s.content;})
+        const followup_prompt = `Based on the following, previous answer to a question, create three followup questions. You should only give the the three questions and nothing else. 
+However, if the answer is saying 'I don't know' or similar, look at the context instead and ask three questions that are very related to this context.
+                            
+Previous answer: {reply.content}
+                            
+Context: {context_string}
+                            
+Three follow-up questions on the strict form: '\n1. Follow-up question one.\n2. Follow-up question two.\n3. Follow-up question three.'`; 
+
+        const questions_response = await model.call(followup_prompt);
+        const generated_followup_questions = textToFollowUps(questions_response);
+        console.log(generated_followup_questions);
 
         // Return reply
         return reply;
