@@ -143,8 +143,6 @@ export const langchainRouter = createTRPCRouter({
         };
 
         // Follow up questions (only testing):
-        let context_string = "";
-        sources.map((s) => {context_string += s.content;})
         const followup_prompt = `Based on the following, previous answer to a question, create three follow-up questions that are asked as if you were a professional psychiatrist asking another professional for guidance or info. You should only give the the three questions and nothing else.
 
 Previous answer: ${reply.content}
@@ -161,7 +159,7 @@ Three follow-up questions on the strict form: '1. Follow-up question one.\n2. Fo
         generated_followup_questions.forEach((element) => {
             letterCount += element.length;
         });
-        if (letterCount < 30) {
+        if (letterCount < 34) { // Because it should give one word questions if answer is bad!
             generated_followup_questions = [
                 "How can I help my patient with anxiety?",
                 "How do I assess trauma in a patient?",
