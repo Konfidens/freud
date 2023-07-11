@@ -5,7 +5,7 @@ import { type FormEvent } from 'react';
 
 type Props = {
     suggestedQuestions: string[],
-    onClick: () => void, // needs to submit the text and disable all buttons for submitting
+    onClick: (n: number) => void,
     isLoadingReply: boolean,
 };
 
@@ -19,7 +19,7 @@ const QuickAskComponent = ({ suggestedQuestions, onClick, isLoadingReply }: Prop
             {suggestedQuestions.map((question: string, index: number) => (
                 <div key={index}>
                     <Button 
-                        onClick={onClick}
+                        onClick={() => onClick(index)}
                         color={"white"}
                         withBorder={true}
                         disabled={isLoadingReply}

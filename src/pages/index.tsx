@@ -62,9 +62,9 @@ export default function Home() {
 
   // const vectorStoreStatistics = api.weaviate.stats.useQuery();
 
-  function handleQuickSubmit() {
+  function handleQuickSubmit(n: number) {
     // Extra "functionality" to 
-    const some_string = suggestedQuestions[0] as string;
+    const some_string = suggestedQuestions[n] as string;
     setQuery(some_string);
 
     setIsLoadingReply(true);
