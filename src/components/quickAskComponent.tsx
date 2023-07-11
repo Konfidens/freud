@@ -11,9 +11,6 @@ type Props = {
 
 
 const QuickAskComponent = ({ suggestedQuestions, onClick, isLoadingReply }: Props) => {
-    // Need some sort of check on the suggestedQuestions here
-    // If not passing this check then just return.
-
     return (
         <div>
             {suggestedQuestions.map((question: string, index: number) => (
@@ -23,7 +20,7 @@ const QuickAskComponent = ({ suggestedQuestions, onClick, isLoadingReply }: Prop
                         color={"white"}
                         withBorder={true}
                         disabled={isLoadingReply}
-                        className='mb-[0.4rem] mt-0.5 w-[64rem]'
+                        className='mb-[0.4rem] mt-1 w-[64rem]'
                     >
                         {question}
                     </Button>

@@ -26,7 +26,11 @@ export default function Home() {
   const [showSettings, setShowSettings] = React.useState(false);
   const [isCreatingDatabase, setIsCreatingDatabase] = React.useState(false);
 
-  const [suggestedQuestions, setSuggestedQuestions] = React.useState<string[]>([]);
+  const [suggestedQuestions, setSuggestedQuestions] = React.useState<string[]>([
+    "How can I help my patient with anxiety?",
+    "How do I assess trauma in a patient?",
+    "What do I do if my patient is very silent?",
+]);
 
   const mutation = api.langchain.conversation.useMutation({
     onError: (error) => {

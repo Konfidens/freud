@@ -146,15 +146,28 @@ export const langchainRouter = createTRPCRouter({
         let context_string = "";
         sources.map((s) => {context_string += s.content;})
         const followup_prompt = `Based on the following, previous answer to a question, create three follow-up questions that are asked as if you were a professional psychiatrist asking another professional for guidance or info. You should only give the the three questions and nothing else.
-However, if the answer says 'I don't know' or similar, ask three very general questions about psychology subject matter, again as if you were a professional psychiatrist  asking another professional for guidance or info.
 
 Previous answer: ${reply.content}
+
+Exception: However, if the answer says 'I don't know', or 'I don't understand', or 'not related to context', or if it is a question, or similar; then give one word questions only.
 
 Three follow-up questions on the strict form: '1. Follow-up question one.\n2. Follow-up question two.\n3. Follow-up question three.'`; 
 
         const questions_response = await model.call(followup_prompt);
-        const generated_followup_questions = textToFollowUps(questions_response);
+        let generated_followup_questions = textToFollowUps(questions_response);
         console.log(generated_followup_questions);
+
+        let letterCount = 0;
+        generated_followup_questions.forEach((element) => {
+            letterCount += element.length;
+        });
+        if (letterCount < 30) {
+            generated_followup_questions = [
+                "How can I help my patient with anxiety?",
+                "How do I assess trauma in a patient?",
+                "What do I do if my patient is very silent?",
+            ];
+        }
 
         // Return reply
         return {reply, generated_followup_questions};
