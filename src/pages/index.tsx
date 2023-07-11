@@ -15,6 +15,8 @@ import FeedbackComponent from "~/components/feedbackComponent";
 import { Feedback } from "~/interfaces/feedback";
 import { error } from "console";
 
+import QuickAskComponent from "~/components/quickAskComponent";
+
 const AVATAR_IMAGE_SIZE = 50;
 
 export default function Home() {
@@ -24,15 +26,20 @@ export default function Home() {
   const [showSettings, setShowSettings] = React.useState(false);
   const [isCreatingDatabase, setIsCreatingDatabase] = React.useState(false);
 
+  const [suggestedQuestions, setSuggestedQuestions] = React.useState<string[]>([]);
+
   const mutation = api.langchain.conversation.useMutation({
     onError: (error) => {
       console.error(error);
       setIsLoadingReply(false);
     },
     onSuccess: (message) => {
-      setMessages([...messages, message!]);
+      setMessages([...messages, message.reply]); // weird change now
       setQuery("");
       setIsLoadingReply(false);
+
+      // Kristian added:
+      setSuggestedQuestions(message.generated_followup_questions);
     },
   });
   // const feedbacks = api.feedback.getAllData.useQuery();
@@ -54,6 +61,20 @@ export default function Home() {
   });
 
   // const vectorStoreStatistics = api.weaviate.stats.useQuery();
+
+  function handleQuickSubmit() {
+    // Extra "functionality" to 
+    const some_string = suggestedQuestions[0] as string;
+    setQuery(some_string);
+
+    setIsLoadingReply(true);
+    const message = {
+      role: Role.User,
+      content: some_string,
+    };
+    setMessages([...messages, message]);
+    mutation.mutate([...messages, message]);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -208,6 +229,15 @@ export default function Home() {
               );
             })}
           </div>
+        </div>
+        <div>
+          <QuickAskComponent
+            suggestedQuestions={suggestedQuestions}
+            onClick={handleQuickSubmit}
+            isLoadingReply={isLoadingReply}
+          />
+
+
         </div>
         <form onSubmit={handleSubmit} className="mb-0 flex flex-row gap-3">
           <InputField

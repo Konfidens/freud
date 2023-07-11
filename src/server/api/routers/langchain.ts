@@ -15,6 +15,8 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 // Kristian testing follow up questions:
 
+
+
 function textToFollowUps(str: string | undefined): string[] {
   if (str == undefined) {
     return [];
@@ -144,18 +146,18 @@ export const langchainRouter = createTRPCRouter({
         let context_string = "";
         sources.map((s) => {context_string += s.content;})
         const followup_prompt = `Based on the following, previous answer to a question, create three follow-up questions that are asked as if you were a professional psychiatrist asking another professional for guidance or info. You should only give the the three questions and nothing else.
-        However, if the answer says 'I don't know' or similar, ask three very general questions about psychology subject matter, again as if you were a professional psychiatrist  asking another professional for guidance or info.
-        
-        Previous answer: ${reply.content}
+However, if the answer says 'I don't know' or similar, ask three very general questions about psychology subject matter, again as if you were a professional psychiatrist  asking another professional for guidance or info.
 
-        Three follow-up questions on the strict form: '1. Follow-up question one.\n2. Follow-up question two.\n3. Follow-up question three.'`; 
+Previous answer: ${reply.content}
+
+Three follow-up questions on the strict form: '1. Follow-up question one.\n2. Follow-up question two.\n3. Follow-up question three.'`; 
 
         const questions_response = await model.call(followup_prompt);
         const generated_followup_questions = textToFollowUps(questions_response);
         console.log(generated_followup_questions);
 
         // Return reply
-        return reply;
+        return {reply, generated_followup_questions};
       } catch (error) {
         console.error(error);
       }
