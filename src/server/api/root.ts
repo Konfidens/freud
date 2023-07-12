@@ -5,6 +5,8 @@ import { langchainRouter } from "./routers/langchain";
 import { vectorRouter } from "./routers/vectorstore";
 import { weaviateRouter } from "./routers/weaviate";
 import { feedbackRouter } from "./routers/feedbackDatabase";
+import { sequentialChainRouter } from "./routers/sequentialchain";
+
 
 /**
  * This is the primary router for your server.
@@ -18,6 +20,7 @@ export const appRouter = createTRPCRouter({
   vectorstore: vectorRouter,
   weaviate: weaviateRouter,
   feedback: feedbackRouter,
+  sequential: sequentialChainRouter,
 });
 
 // export type definition of API

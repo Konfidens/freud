@@ -16,6 +16,7 @@ import FeedbackComponent from "~/components/feedbackComponent";
 import { env } from "~/env.mjs";
 
 import QuickAskComponent from "~/components/quickAskComponent";
+import { sleep } from "@tanstack/query-core/build/lib/utils";
 
 const AVATAR_IMAGE_SIZE = 50;
 
@@ -88,6 +89,20 @@ export default function Home() {
     mutation.mutate([...messages, message]);
   }
 
+
+
+  // SEQUENTIAL
+
+  const callSeqChain = api.sequential.callSeqChain.useMutation({
+    onSuccess: (output) => {
+      console.log(output)
+    }
+  });
+
+  const seq = () => {
+    callSeqChain.mutate(query);
+  }
+
   return (
     <>
       <Head>
@@ -115,6 +130,7 @@ export default function Home() {
               <LogoWordmark color={colors.green750} />
             </div>
           </div>
+          <Button onClick={seq}>Send inn til sequential</Button>
           <div className="container text-2xl">
             {messages.map((message, idx) => {
               return (
