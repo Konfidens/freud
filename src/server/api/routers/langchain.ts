@@ -10,6 +10,7 @@ import { BufferMemory } from "langchain/memory";
 import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import weaviate from "weaviate-ts-client";
 import { z } from "zod";
+import { env } from "~/env.mjs";
 import { Message, Role, type Source } from "~/interfaces/message";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -19,15 +20,15 @@ function textToFollowUps(str: string | undefined): string[] {
     return [];
   }
   const followUpQuestions: string[] = [];
-  for (let i = 1; i < 4 ; i++){
+  for (let i = 1; i < 4; i++) {
     let question = "";
     let start_found = false;
     let start_index = 0;
-    for (let j = 0; j < str.length ; j++ ){
-      if (str[j] == i.toString() && !start_found){
+    for (let j = 0; j < str.length; j++) {
+      if (str[j] == i.toString() && !start_found) {
         start_index = j + 3;
         start_found = true;
-      } 
+      }
       if (str[j] == "?" && start_found) {
         question = str.substring(start_index, j + 1);
         followUpQuestions.push(question);
@@ -41,7 +42,7 @@ function textToFollowUps(str: string | undefined): string[] {
 // Specify language model, embeddings and prompts
 const model = new OpenAI({
   callbacks: [new ConsoleCallbackHandler()],
-}); 
+});
 
 const CONDENSE_PROMPT = `Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
 
@@ -64,12 +65,10 @@ const NUM_SOURCES = 5;
 const SIMILARITY_THRESHOLD = 0.3;
 
 // Setup weaviate client
-const client = (weaviate as any).client({
-  scheme: process.env.WEAVIATE_SCHEME || "http",
-  host: process.env.WEAVIATE_HOST || "localhost:8080",
-  apiKey: new (weaviate as any).ApiKey(
-    process.env.WEAVIATE_API_KEY || "default-api-key"
-  ),
+const client = weaviate.client({
+  scheme: env.WEAVIATE_SCHEME,
+  host: env.WEAVIATE_HOST,
+  apiKey: new weaviate.ApiKey(env.WEAVIATE_API_KEY),
 });
 
 // Connect to weaviate vector store
@@ -175,18 +174,18 @@ Three follow-up questions on the strict form: '1. Follow-up question one.\n2. Fo
 
         let letterCount = 0;
         generated_followup_questions.forEach((element) => {
-            letterCount += element.length;
+          letterCount += element.length;
         });
         if (letterCount < 50) { // Because it should give one word questions if answer is bad!
-            generated_followup_questions = [
-                "How can I help my patient with anxiety?",
-                "How do I assess trauma in a patient?",
-                "What do I do if my patient is very silent?",
-            ];
+          generated_followup_questions = [
+            "How can I help my patient with anxiety?",
+            "How do I assess trauma in a patient?",
+            "What do I do if my patient is very silent?",
+          ];
         }
 
         // Return reply
-        return {reply, generated_followup_questions};
+        return { reply, generated_followup_questions };
       } catch (error) {
         console.error(error);
       }

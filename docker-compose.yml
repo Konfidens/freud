@@ -1,64 +1,73 @@
-version: '3.7'
+version: "3.7"
 
 services:
-  mysql:
-    image: mysql:8.0
-    command: --default-authentication-plugin=caching_sha2_password
-    restart: always
-    environment:
-      - MYSQL_DATABASE=freuddb
-      - MYSQL_USER=freud
-      - MYSQL_PASSWORD=testpswd
-      - MYSQL_ROOT_PASSWORD=root
+  # mysql:
+  #   image: mysql:8.0
+  #   command: --default-authentication-plugin=caching_sha2_password
+  #   restart: always
+  #   environment:
+  #     - MYSQL_DATABASE=freuddb
+  #     - MYSQL_USER=freud
+  #     - MYSQL_PASSWORD=testpswd
+  #     - MYSQL_ROOT_PASSWORD=root
+  #   ports:
+  #     - "3316:3306" #change the first port number if you already have MySQL running locally
+
+  weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --scheme
+      - http
+    image: semitechnologies/weaviate:1.19.11
     ports:
-      - '3316:3306' #change the first port number if you already have MySQL running locally
-    # weaviate:
-    # command:
-    #   - --host
-    #   - 0.0.0.0
-    #   - --port
-    #   - "8080"
-    #   - --scheme
-    #   - http
-    # image: semitechnologies/weaviate:1.19.11
-    # ports:
-    #   - 8080:8080
-    # restart: on-failure:0
-    # environment:
-    #   NER_INFERENCE_API: "http://ner-transformers:8080"
-    #   SUM_INFERENCE_API: "http://sum-transformers:8080"
-    #   SPELLCHECK_INFERENCE_API: "http://text-spellcheck:8080"
-    #   OPENAI_APIKEY: $OPENAI_API_KEY
-    #   QUERY_DEFAULTS_LIMIT: 25
-    #   AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-    #   PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-    #   DEFAULT_VECTORIZER_MODULE: "text2vec-openai"
-    #   ENABLE_MODULES: "text2vec-openai,ner-transformers,sum-transformers,text-spellcheck,generative-openai"
-    #   CLUSTER_HOSTNAME: "node1"
-    #   # LOG_LEVEL: "debug"
-    #   AUTHENTICATION_APIKEY_ENABLED: "true"
-    #   AUTHENTICATION_APIKEY_ALLOWED_KEYS: ${WEAVIATE_API_KEY}
-    #   AUTHENTICATION_APIKEY_USERS: "default"
-    # ner-transformers:
-    #   image: semitechnologies/ner-transformers:dbmdz-bert-large-cased-finetuned-conll03-english
-    #   environment:
-    #     ENABLE_CUDA: "0"
-    # sum-transformers:
-    #   image: semitechnologies/sum-transformers:facebook-bart-large-cnn-1.0.0
-    #   environment:
-    #     ENABLE_CUDA: "0"
-    # text-spellcheck:
-    #   image: semitechnologies/text-spellcheck-model:pyspellchecker-en
-    #   postgres-db:
-    #     image: postgres
-    #     restart: always
-    #     ports:
-    #       - 5432:5432
-    #     environment:
-    #       POSTGRES_USER: joddern
-    #       POSTGRES_PASSWORD: prisma
-    #       POSTGRES_DB: freud
-    #     volumes:
-    #       - postgres:/var/lib/postgresql/data
-    # volumes:
-    #   postgres: ~
+      - 8080:8080
+    restart: on-failure:0
+    depends_on:
+      - ner-transformers
+      - sum-transformers
+      - text-spellcheck
+    environment:
+      NER_INFERENCE_API: "http://ner-transformers:8080"
+      SUM_INFERENCE_API: "http://sum-transformers:8080"
+      SPELLCHECK_INFERENCE_API: "http://text-spellcheck:8080"
+      OPENAI_APIKEY: $OPENAI_API_KEY
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "text2vec-openai"
+      ENABLE_MODULES: "text2vec-openai,ner-transformers,sum-transformers,text-spellcheck,generative-openai"
+      CLUSTER_HOSTNAME: "node1"
+      # LOG_LEVEL: "debug"
+      AUTHENTICATION_APIKEY_ENABLED: "true"
+      AUTHENTICATION_APIKEY_ALLOWED_KEYS: ${WEAVIATE_API_KEY}
+      AUTHENTICATION_APIKEY_USERS: "default"
+
+  ner-transformers:
+    image: semitechnologies/ner-transformers:dbmdz-bert-large-cased-finetuned-conll03-english
+    environment:
+      ENABLE_CUDA: "0"
+
+  sum-transformers:
+    image: semitechnologies/sum-transformers:facebook-bart-large-cnn-1.0.0
+    environment:
+      ENABLE_CUDA: "0"
+
+  text-spellcheck:
+    image: semitechnologies/text-spellcheck-model:pyspellchecker-en
+
+#   postgres-db:
+#   image: postgres
+#     restart: always
+#     ports:
+#       - 5432:5432
+#     environment:
+#       POSTGRES_USER: joddern
+#       POSTGRES_PASSWORD: prisma
+#       POSTGRES_DB: freud
+#     volumes:
+#       - postgres:/var/lib/postgresql/data
+# volumes:
+#   postgres: ~

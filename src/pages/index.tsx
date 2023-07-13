@@ -1,7 +1,7 @@
 import Head from "next/head";
 import React, { type FormEvent, useState } from "react";
 import { SidebarFreud } from "~/SidebarFreud";
-import { VectorStoreComponent } from "~/components/VectorStoreComponent";
+import { VectorStoreSettings } from "~/components/VectorStoreSettings";
 import { Button } from "~/components/button/Button";
 import { colors } from "~/stitches/colors";
 import { Icon } from "~/components/icon/Icon";
@@ -116,7 +116,7 @@ export default function Home() {
             showSettings={showSettings}
             setShowSettings={setShowSettings}
           >
-            <VectorStoreComponent />
+            <VectorStoreSettings />
           </SidebarFreud>
         )}
 
