@@ -47,6 +47,17 @@ export default function Home() {
       setSuggestedQuestions(message!.generated_followup_questions);
     },
   });
+
+  const agent = api.agent.plan.useMutation({
+    onError: (error) => {
+      console.error(error);
+      setIsLoadingReply(false);
+    },
+    onSuccess: (data) => {
+      console.debug(data);
+    },
+  });
+
   // const feedbacks = api.feedback.getAllData.useQuery();
 
   const queryResult = api.feedback.createNewFeedback.useMutation({
@@ -85,7 +96,8 @@ export default function Home() {
       content: query,
     };
     setMessages([...messages, message]);
-    mutation.mutate([...messages, message]);
+    // mutation.mutate([...messages, message]);
+    agent.mutate([...messages, message]);
   }
 
   return (
