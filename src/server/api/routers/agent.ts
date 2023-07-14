@@ -20,7 +20,7 @@ import { env } from "~/env.mjs";
 import { Message } from "~/interfaces/message";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 
-const model = new OpenAI({
+const model = new ChatOpenAI({
   temperature: 0,
   modelName: "gpt-3.5-turbo",
   verbose: true,
@@ -109,7 +109,7 @@ Helpful answer:`;
         outputKey: `text_${indexName}`,
         returnMessages: true,
       }),
-      // qaTemplate: prompt_template,
+      qaTemplate: prompt_template,
       qaChainOptions: {
         type: "stuff",
         prompt: PROMPT,
