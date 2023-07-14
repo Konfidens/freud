@@ -7,23 +7,15 @@ import { VectorStore } from "langchain/dist/vectorstores/base";
 import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import weaviate from "weaviate-ts-client";
+import { ConsoleCallbackHandler } from "langchain/callbacks";
 
 const categories = {
     istdp: "intensive short-term dynamic psychotherapy (ISTDP)",
-    cpt: "cognitive processing therapy (CPT)"
+    cbt: "Cognitive behavioral therapy (CBT)"
 }
 
 
-//Chain number 1
-const llm = new OpenAI({ temperature: 0 });
-const methodtemplate = `You are an expert psychologist who is helping a colleague. You both practice {method}, a form of psychotherapy. They have a work-related question and you are to answer as an helpful and professional supervisor.
- 
-  Question: {question}
-  Helpful and professional answer: `;
-const promptTemplate = new PromptTemplate({
-    template: methodtemplate,
-    inputVariables: ["question", "method"],
-});
+
 
 const embeddings = new OpenAIEmbeddings();
 
@@ -51,7 +43,7 @@ const vectorStore1 = await WeaviateStore.fromExistingIndex(embeddings, {
 
 const vectorStore2 = await WeaviateStore.fromExistingIndex(embeddings, {
     client,
-    indexName: "CPT",
+    indexName: "CBT",
     metadataKeys: [
         "title",
         "author",
@@ -61,11 +53,11 @@ const vectorStore2 = await WeaviateStore.fromExistingIndex(embeddings, {
         "loc_lines_to",
     ],
 });
+const model = new OpenAI({
+    callbacks: [new ConsoleCallbackHandler()],
+});
 
 
-// const chain1 = new LLMChain({ llm, prompt: promptTemplate });
-const chain1 = RetrievalQAChain.fromLLM(new OpenAI({ temperature: 0 }), vectorStore1.asRetriever(), { prompt: promptTemplate, returnSourceDocuments: true })
-const chain2 = RetrievalQAChain.fromLLM(new OpenAI({ temperature: 0 }), vectorStore2.asRetriever(), { prompt: promptTemplate, returnSourceDocuments: true })
 
 
 const comparisonTemplate = `You are an expert psychologist who is helping a colleague. They ask you to compare two answers to a question, given as "Answer to {method1}" and "Answer to {method2}" below. You must give a comparison of the two answers and be totally objective. Do not use anything else than the given answers in your comparison.
@@ -90,15 +82,40 @@ export const sequentialChainRouter = createTRPCRouter({
         .input(z.string())
         .mutation(async ({ input }) => {
             const method1 = categories.istdp;
-            const method2 = categories.cpt;
+            const method2 = categories.cbt;
 
-            const istdp = chain1.call({ question: input, method: method1 })
-            const cpt = chain2.call({ question: input, method: method2 })
+            const method1template = `You are an expert psychologist who is helping a colleague. You both practice ${method1}, a form of psychotherapy. They have a work-related question and you are to answer as an helpful and professional supervisor.
+ 
+  Question: {question}
+  Helpful and professional answer: `;
+            const prompt1Template = new PromptTemplate({
+                template: method1template,
+                inputVariables: ["question"],
+            });
 
-            const cptanswer = await cpt;
-            const istdpanswer = await istdp;
+            const method2template = `You are an expert psychologist who is helping a colleague. You both practice ${method2}, a form of psychotherapy. They have a work-related question and you are to answer as an helpful and professional supervisor.
+ 
+  Question: {question}
+  Helpful and professional answer: `;
+            const prompt2Template = new PromptTemplate({
+                template: method2template,
+                inputVariables: ["question"],
+            });
 
-            const comparison = await comparisonChain.call({ answer1: cptanswer.text, answer2: istdpanswer.text, method1: method1, method2: method2 })
-            return { istdpanswer, cptanswer, comparison }
+
+            const chain1 = RetrievalQAChain.fromLLM(model, vectorStore1.asRetriever(), { prompt: prompt1Template, returnSourceDocuments: true })
+            const chain2 = RetrievalQAChain.fromLLM(new OpenAI({ temperature: 0 }), vectorStore2.asRetriever(), { prompt: prompt2Template, returnSourceDocuments: true })
+
+
+            const responseA = await prompt1Template.format({ question: "What do I do with a silent patient" });
+            console.log({ responseA });
+
+            const response1 = await chain1.call({ query: input })
+            const response2 = await chain2.call({ query: input })
+
+
+            const comparison = await comparisonChain.call({ answer1: response1.text, answer2: response2.text, method1: method1, method2: method2 })
+
+            return { response1, response2, comparison } //cptanswer, comparison
         }),
 });

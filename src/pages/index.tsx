@@ -95,7 +95,9 @@ export default function Home() {
 
   const callSeqChain = api.sequential.callSeqChain.useMutation({
     onSuccess: (output) => {
-      console.log(output)
+      console.log(output.response1.text)
+      console.log(output.response2.text)
+      console.log(output.comparison.text)
     }
   });
 
