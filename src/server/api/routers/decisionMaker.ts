@@ -105,8 +105,9 @@ export const decisionRouter = createTRPCRouter({
               .string()
               .describe("The scientific topic/area/field of interest"),
           }),
+          returnDirect: true,
           func: async ({ topic }) => {
-            const reply = `Asked about new research related to ${topic}`;
+            const reply = `This is a question about new research related to ${topic}`;
             console.debug(reply);
             return reply;
           },
@@ -128,12 +129,16 @@ export const decisionRouter = createTRPCRouter({
               })
             ),
           }),
+          returnDirect: true,
           func: async ({ symptoms }) => {
-            const symptomList: string[] = symptoms.map((e) => e.symptom);
-            const reply = `Find diagnosis given the following symptoms: ${symptomList.join(
-              ", "
-            )}.`;
-            console.debug(reply);
+            const symptomList: string = symptoms
+              .map((e) => e.symptom)
+              .join(", ");
+            console.debug(
+              "This is a question about setting a diagnosis for the following symptoms: ${symptomList} "
+            );
+            const reply = `Find diagnosis given the following symptoms: ${symptomList}.`;
+            // console.debug(reply);
             return reply;
           },
         }),
@@ -142,21 +147,22 @@ export const decisionRouter = createTRPCRouter({
         new DynamicStructuredTool({
           name: "answer-psychotherapy-question",
           description:
-            "answers questions related to psychology and psychotherapy that is NOT about new research or determining the correct diagnosis",
+            "answers questions related to psychology and psychotherapy",
           schema: z.object({
             question: z
               .string()
               .describe("a question about psychology or psychotherapy"),
           }),
+          returnDirect: true,
           func: async ({ question }) => {
             console.debug(`This is a general psychotherapy question`);
 
             const chain = await getConversationalRetriever("ISTDP");
             const reply = await chain.call({ question });
-            console.debug(
-              "Reply from ConversationalRetrieverAgent:\n" +
-                JSON.stringify(reply.text)
-            );
+            // console.debug(
+            //   "Reply from ConversationalRetrieverAgent:\n" +
+            //     JSON.stringify(reply.text)
+            // );
             return reply.text;
           },
         }),
@@ -173,9 +179,13 @@ export const decisionRouter = createTRPCRouter({
                 "question or message that is unrelated to psychology or psychotherapy"
               ),
           }),
+          returnDirect: true,
           func: async ({ message }) => {
+            console.debug(
+              "This question is unrelated to psychology or psychotherapy"
+            );
             const reply = `Freud does not reply to these types of messages`;
-            console.debug(reply);
+            // console.debug(reply);
             return reply;
           },
         }),
@@ -194,9 +204,6 @@ export const decisionRouter = createTRPCRouter({
       console.debug("Agent loaded");
 
       const result = await executor.call({ input: question });
-      console.debug("Agent returned:\n\n" + JSON.stringify(result));
-
-      const replyFromTool = result.intermediateSteps.pop().observation;
-      console.debug("\nFinal observation from tool:\n" + replyFromTool);
+      console.debug("Agent returned:\n" + JSON.stringify(result.output));
     }),
 });
