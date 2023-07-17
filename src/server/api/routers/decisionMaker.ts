@@ -153,7 +153,10 @@ export const decisionRouter = createTRPCRouter({
 
             const chain = await getConversationalRetriever("ISTDP");
             const reply = await chain.call({ question });
-            console.debug(reply);
+            console.debug(
+              "Reply from ConversationalRetrieverAgent:\n" +
+                JSON.stringify(reply.text)
+            );
             return reply.text;
           },
         }),
@@ -182,8 +185,8 @@ export const decisionRouter = createTRPCRouter({
 
       const executor = await initializeAgentExecutorWithOptions(tools, model, {
         agentType: "structured-chat-zero-shot-react-description",
-        verbose: true,
-        returnIntermediateSteps: false,
+        verbose: false,
+        returnIntermediateSteps: true,
         // agentArgs: {
         //   suffix: SUFFIX,
         // },
@@ -191,6 +194,9 @@ export const decisionRouter = createTRPCRouter({
       console.debug("Agent loaded");
 
       const result = await executor.call({ input: question });
-      console.debug("Agent returned:\n" + JSON.stringify(result));
+      console.debug("Agent returned:\n\n" + JSON.stringify(result));
+
+      const replyFromTool = result.intermediateSteps.pop().observation;
+      console.debug("\nFinal observation from tool:\n" + replyFromTool);
     }),
 });
