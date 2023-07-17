@@ -48,7 +48,7 @@ export default function Home() {
     },
   });
 
-  const agent = api.agent.plan.useMutation({
+  const agent = api.decision.initial.useMutation({
     onError: (error) => {
       console.error(error);
       setIsLoadingReply(false);
