@@ -108,6 +108,19 @@ const Chat = ({ messages, setMessages }: Prop) => {
     mutation.mutate([...messages, message]);
   }
 
+
+
+  const llmchoice = api.llmchoice.getTool.useMutation({
+    onError: (error) => {
+      console.error(error);
+    },
+    onSuccess: (message) => {
+      console.log(message)
+    },
+  });
+
+
+
   return (
     <>
       <div
@@ -156,6 +169,11 @@ const Chat = ({ messages, setMessages }: Prop) => {
             className="h-10 self-center"
           >
             <Icon name={"arrowNarrowRight"} color={colors.green600}></Icon>
+          </Button>
+          <Button
+            onClick={() => llmchoice.mutate(query)}
+          >
+            get choice
           </Button>
         </form>
         <div ref={bottomRef} />
