@@ -41,7 +41,8 @@ function textToFollowUps(str: string | undefined): string[] {
 
 // Specify language model, embeddings and prompts
 const model = new OpenAI({
-  callbacks: [new ConsoleCallbackHandler()],
+  // callbacks: [new ConsoleCallbackHandler()],
+  cache: true,
 });
 
 const CONDENSE_PROMPT = `Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
