@@ -1,6 +1,6 @@
 import React from "react";
-import { Button } from "~/components/button/Button";
-import { Icon } from "~/components/icon/Icon";
+import { Button } from "./components/ui/button/Button";
+import { Icon } from "./components/ui/icon/Icon";
 
 type props = {
   showSettings: Boolean,
