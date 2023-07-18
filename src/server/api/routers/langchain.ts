@@ -41,6 +41,7 @@ function textToFollowUps(str: string | undefined): string[] {
 
 // Specify language model, embeddings and prompts
 const model = new OpenAI({
+  temperature: 0,
   callbacks: [new ConsoleCallbackHandler()],
 });
 
