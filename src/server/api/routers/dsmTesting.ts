@@ -23,7 +23,7 @@ export const dsmRouter = createTRPCRouter({
     // return findEndOfTag(`<p clas<p></p></p>`, 0);
     // return findAllCategoryIntervals();
     const arrCategories = generateDoc();
-    createFilesFromArray(arrCategories);
+    createManyFilesFromArray(arrCategories);
     return 5;
   }),
 });
@@ -153,8 +153,8 @@ function removeSpacingInString(text: string): string {
   return text.replace(/\s/g,'');
 }
 
-function createFilesFromArray(diagnosisArray: Chunk[]): void {
+function createManyFilesFromArray(diagnosisArray: Chunk[]): void {
   diagnosisArray.forEach((elem)=>{
-    fs.writeFileSync(path.join(dirPath, elem.diagnosis.replace(/\s/g,'')).replace(/[\/\\?%*:|"<>\.]/g, '_').concat(".json"), JSON.stringify(elem), {flag: 'w'});
+    fs.writeFileSync(path.join(dirPath, elem.diagnosis.replace(/\s/g,'').replace(/[\/\\?%*:|"<>\.]/g, '_')).concat(".json"), JSON.stringify(elem), {flag: 'w'});
   })
 }
