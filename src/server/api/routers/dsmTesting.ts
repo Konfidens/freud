@@ -13,6 +13,11 @@ const dirPath = path.join(
   "DSM",
 );
 
+const dsmWebPagePath = path.join(
+  process.cwd(),
+  "public",
+);
+
 export const dsmRouter = createTRPCRouter({
   testing: publicProcedure.mutation(() => {
     console.log("testing!");
@@ -81,7 +86,7 @@ type CategoryInterval = {
 }
 
 function findAllCategoryIntervals(): CategoryInterval[] {
-  const text = fs.readFileSync(path.join(dirPath, "dsm_norsk_nettside.html"), 'utf-8');
+  const text = fs.readFileSync(path.join(dsmWebPagePath, "dsm_norsk_nettside.html"), 'utf-8');
   const CATEGORY_TAG = `<p class="tretegnoverskrift">`;
 
   const categories: CategoryInterval[] = [];
@@ -116,7 +121,7 @@ type Chunk = {
 };
 
 function generateDoc(): Chunk[] {
-  const text = fs.readFileSync(path.join(dirPath, "dsm_norsk_nettside.html"), 'utf-8');
+  const text = fs.readFileSync(path.join(dsmWebPagePath, "dsm_norsk_nettside.html"), 'utf-8');
   const DIAGNOSIS_TAG = `<p class="firetegnoverskrift0">`;
 
   const generatedChunks: Chunk[] = [];
