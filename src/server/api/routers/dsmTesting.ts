@@ -6,24 +6,25 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { JSDOM } from "jsdom";
 import fs from "fs";
 
-const filePath = path.join(
+const dirPath = path.join(
   process.cwd(),
   "public",
   "documents",
   "DSM",
-  "dsm_norsk_nettside.html"
 );
 
 export const dsmRouter = createTRPCRouter({
   testing: publicProcedure.mutation(() => {
-    console.log("tsting!");
+    console.log("testing!");
     // return "testing tittes!";
     // return countCharacters();
     // return htmlDocSplitter(`<h1>This is heading 1</h1>`);
     // return checkForWordInString("Hei jejeg har det velveldig bra!", "veldig", 0);
     // return findEndOfTag(`<p clas<p></p></p>`, 0);
     // return findAllCategoryIntervals();
-    return generateDoc();
+    const arrCategories = generateDoc();
+    createFilesFromArray(arrCategories);
+    return 5;
   }),
 });
 
@@ -80,7 +81,7 @@ type CategoryInterval = {
 }
 
 function findAllCategoryIntervals(): CategoryInterval[] {
-  const text = fs.readFileSync(filePath, 'utf-8');
+  const text = fs.readFileSync(path.join(dirPath, "dsm_norsk_nettside.html"), 'utf-8');
   const CATEGORY_TAG = `<p class="tretegnoverskrift">`;
 
   const categories: CategoryInterval[] = [];
@@ -94,7 +95,7 @@ function findAllCategoryIntervals(): CategoryInterval[] {
     const startIndex = currentIndex;
     currentIndex = checkForWordInString(text, CATEGORY_TAG, endOfTagIndex);
     if (currentIndex == -1) {
-      console.debug("-1 from finding index of category.");
+      // console.debug("-1 from finding index of category.");
       categories.push({fromInclusive: startIndex, toExclusive: text.length, categoryName: currentCategory});
       break;
     }
@@ -115,7 +116,7 @@ type Chunk = {
 };
 
 function generateDoc(): Chunk[] {
-  const text = fs.readFileSync(filePath, 'utf-8');
+  const text = fs.readFileSync(path.join(dirPath, "dsm_norsk_nettside.html"), 'utf-8');
   const DIAGNOSIS_TAG = `<p class="firetegnoverskrift0">`;
 
   const generatedChunks: Chunk[] = [];
@@ -132,7 +133,7 @@ function generateDoc(): Chunk[] {
       const startIndex = currentIndex;
       currentIndex = checkForWordInString(text, DIAGNOSIS_TAG, endOfTagIndex, foundCategoryIntervals[i]?.toExclusive);
       if (currentIndex == -1) {
-        console.debug("-1 from finding index of diagnosis.");
+        // console.debug("-1 from finding index of diagnosis.");
         generatedChunks.push({text: html2text(text.substring(startIndex, foundCategoryIntervals[i]?.toExclusive as number)), category: foundCategoryIntervals[i]?.categoryName as string, diagnosis: currentDiagnosis });
         break;
       }
@@ -143,6 +144,17 @@ function generateDoc(): Chunk[] {
       currentDiagnosis = html2text(text.substring(currentIndex, endOfTagIndex));
     }
   }
-  console.log(JSON.stringify(generatedChunks));
+  // console.log(JSON.stringify(generatedChunks));
   return generatedChunks;
+}
+
+
+function removeSpacingInString(text: string): string {
+  return text.replace(/\s/g,'');
+}
+
+function createFilesFromArray(diagnosisArray: Chunk[]): void {
+  diagnosisArray.forEach((elem)=>{
+    fs.writeFileSync(path.join(dirPath, elem.diagnosis.replace(/\s/g,'')).replace(/[\/\\?%*:|"<>\.]/g, '_').concat(".json"), JSON.stringify(elem), {flag: 'w'});
+  })
 }
