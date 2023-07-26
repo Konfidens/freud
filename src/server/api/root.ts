@@ -6,6 +6,7 @@ import { weaviateRouter } from "./routers/weaviate";
 import { feedbackRouter } from "./routers/feedbackDatabase";
 import { sourceRouter } from "./routers/sourceformat";
 import { followUpRouter } from "./routers/followup";
+import { dsmRouter } from "./routers/dsmTesting";
 
 /**
  * This is the primary router for your server.
@@ -20,6 +21,7 @@ export const appRouter = createTRPCRouter({
   feedback: feedbackRouter,
   source: sourceRouter,
   followup: followUpRouter,
+  dsm: dsmRouter,
 });
 
 // export type definition of API
