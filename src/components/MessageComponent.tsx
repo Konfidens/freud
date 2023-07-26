@@ -1,9 +1,9 @@
-import React, { useState } from "react";
 import Image from "next/image";
-import { type Message, Role } from "~/interfaces/message";
-import { colors } from "~/stitches/colors";
+import React, { useState } from "react";
+import { Role, type Message } from "~/interfaces/message";
+import { api } from "~/utils/api";
 import SourceList from "./FreudSource/SourceList";
-import { Button } from "./ui/button/Button";
+import { OpenAlexList } from "./OpenAlexList";
 
 type Prop = {
   message: Message;
@@ -13,55 +13,79 @@ type Prop = {
 const AVATAR_IMAGE_SIZE = 50;
 
 const MessageComponent = ({ message, children }: Prop) => {
-
   //initializes with length of sources (if sources are available) or is empty array
-  const [activeSources, setActiveSources] = useState<boolean[]>(new Array(message.sources?.length ?? 0).fill(false));
+  const [activeSources, setActiveSources] = useState<boolean[]>(
+    new Array(message.sources?.length ?? 0).fill(false)
+  );
   const [scrollToId, setScrollToId] = useState<number>(-1);
+  const [openAlex, setOpenAlex] = useState({});
+
+  const openAlexKeywords = api.alex.keywords.useMutation({
+    onError: (error) => {
+      console.error(error);
+    },
+    onSuccess: (response) => {
+      console.debug(response);
+      setOpenAlex(response);
+    },
+  });
+
+  React.useEffect(() => {
+    if (message.role === Role.Assistant) {
+      openAlexKeywords.mutate({ message });
+    }
+  }, []);
 
   const formatLinks = (input: string): React.JSX.Element => {
     try {
+      const regex = /\[[0-9]+\]/g;
 
-      var regex = /\[[0-9]+\]/g;
+      const goodspaces = input.replaceAll("\n", " \n");
 
-      const goodspaces = input.replaceAll("\n", " \n")
+      const splittext = goodspaces.split(" ");
 
-      const splittext = goodspaces.split(' ');
-
-      let outputlist: any[] = []
+      const outputlist: any[] = [];
 
       let mystring = "";
       splittext.map((split, idx) => {
         if (regex.test(split)) {
-          outputlist.push(mystring)
-          mystring = ""
+          outputlist.push(mystring);
+          mystring = "";
           for (let i = 1; i <= message.sources!.length; i++) {
             if (parseInt(split.charAt(1)) == i) {
-              outputlist.push(<button key={idx} className="text-blue600" onClick={() => {
-                setScrollToId(i - 1);
-                setActiveSources(prevState => prevState.map((active, index) => index === i - 1 ? true : active))
-              }}>[{i}].</button>)
+              outputlist.push(
+                <button
+                  key={idx}
+                  className="text-blue600"
+                  onClick={() => {
+                    setScrollToId(i - 1);
+                    setActiveSources((prevState) =>
+                      prevState.map((active, index) =>
+                        index === i - 1 ? true : active
+                      )
+                    );
+                  }}
+                >
+                  [{i}].
+                </button>
+              );
             }
           }
         } else {
           mystring += split + " ";
-
         }
-      })
+      });
 
-      const output = <p className='whitespace-pre-wrap'>
-        {outputlist}
-      </p>
+      const output = <p className="whitespace-pre-wrap">{outputlist}</p>;
 
       return output;
-    }
-    catch (error) {
+    } catch (error) {
       // Code above is bad. So if it breaks, sources wont be clickable.
-      console.log("Error in formatting sources")
-      console.log(error)
-      return <p>{input}</p>
+      console.log("Error in formatting sources");
+      console.log(error);
+      return <p>{input}</p>;
     }
-  }
-
+  };
 
   return (
     <div className="container border-b-2 border-gray900 py-10">
@@ -74,9 +98,7 @@ const MessageComponent = ({ message, children }: Prop) => {
             width={AVATAR_IMAGE_SIZE}
             height={AVATAR_IMAGE_SIZE}
           />
-          <p className="pt-5 whitespace-pre-wrap">
-            {message.content}
-          </p>
+          <p className="whitespace-pre-wrap pt-5">{message.content}</p>
         </div>
       ) : (
         <div>
@@ -91,7 +113,18 @@ const MessageComponent = ({ message, children }: Prop) => {
             {children}
             {formatLinks(message.content)}
           </div>
-          <SourceList sources={message.sources ?? []} activeSources={activeSources} setActiveSources={setActiveSources} scrollToId={scrollToId} setScrollToId={setScrollToId} />
+          <SourceList
+            sources={message.sources ?? []}
+            activeSources={activeSources}
+            setActiveSources={setActiveSources}
+            scrollToId={scrollToId}
+            setScrollToId={setScrollToId}
+          />
+          {openAlex?.results?.length > 0 ? (
+            <OpenAlexList works={openAlex.results} />
+          ) : (
+            "Searching in OpenAlex..."
+          )}
         </div>
       )}
     </div>

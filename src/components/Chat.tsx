@@ -99,7 +99,6 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
       throw new Error("Index of clicked question is out of bounds");
     }
     setQuery(question);
-
     setIsLoadingReply(true);
     setIsLoadingFollowUps(true);
     const message = {
@@ -110,8 +109,10 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
     mutation.mutate({ messages: [...messages, message], categories });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleSubmit(event?: FormEvent<HTMLFormElement>) {
+    if (event) {
+      event.preventDefault();
+    }
 
     //Quickfix for empty query
     if (query.length == 0) {
