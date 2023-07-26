@@ -28,8 +28,9 @@ export default function Home() {
       if (!data) {
         throw new Error("Data not defined in OnSuccess")
       }
+      console.log("\ndata coming:");
       console.log(data);
-      console.log("HEI!!!!!!")
+      console.log("HEI!!!!!!");
     }
   })
 
