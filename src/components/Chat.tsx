@@ -1,3 +1,4 @@
+import { env } from "process";
 import React, {
   createRef,
   useEffect,
@@ -127,12 +128,65 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
     mutation.mutate({ messages: [...messages, message], categories });
   }
 
+
+
+
+  //CODE for running tests
+  const TEST = true;
+  const testMessages = [
+    "How can I help my patient with anxiety?",
+    "Why?"
+  ]
+
+  const testmutation = api.source.ask.useMutation();
+
+  useEffect(() => {
+    if (!TEST || env.NODE_ENV === "development") {
+      return
+    }
+    if (testMessages.length == 0) {
+      throw new Error("Test questions must be set for a test-run")
+    }
+
+    let tempmessages: Message[] = []
+
+    const askTestQuestion = (idx: number) => {
+      if (idx >= testMessages.length) return
+
+      const question = testMessages[idx]!;
+
+      const message = {
+        role: Role.User,
+        content: question,
+      };
+      tempmessages = [...tempmessages, message]
+      setMessages(tempmessages)
+
+
+      testmutation.mutate({ messages: tempmessages, categories: { ISTDP: true, CBT: true } }, {
+        onSuccess: (answer) => {
+          if (!answer) {
+            return;
+          }
+          tempmessages = [...tempmessages, answer];
+          setMessages(tempmessages)
+          setIsLoadingReply(false);
+          console.log("ferdig, spør om ", idx + 1)
+          askTestQuestion(idx + 1)
+        }
+      });
+      setIsLoadingReply(true);
+    }
+
+    askTestQuestion(0);
+  }, [])
+
+
   return (
     <>
       <div
-        className={`min-h-[1rem] w-2/3 text-2xl transition-all duration-1000 ${
-          messages.length > 0 ? "grow" : ""
-        } flex flex-col items-center`}
+        className={`min-h-[1rem] w-2/3 text-2xl transition-all duration-1000 ${messages.length > 0 ? "grow" : ""
+          } flex flex-col items-center`}
       >
         <MessageList messages={messages} />
         {isLoadingReply && (
