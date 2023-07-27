@@ -27,7 +27,7 @@ export const dsmRouter = createTRPCRouter({
     // return checkForWordInString("Hei jejeg har det velveldig bra!", "veldig", 0);
     // return findEndOfTag(`<p clas<p></p></p>`, 0);
     // return findAllCategoryIntervals();
-    const arrCategories = generateDoc();
+    const arrCategories = findDiagnosisChunks();
     createManyFilesFromArray(arrCategories);
     return 5;
   }),
@@ -63,16 +63,22 @@ function checkForWordInString(text: string, word: string, fromIndex: number, toI
 }
 
 
-function findEndOfTag(text: string, fromIndex: number): number {
+function findEndOfTag(text: string, fromIndex: number, startTag?: string, endTag?: string): number {
   // assume <p></p> tag
+  if (startTag == undefined) {
+    startTag = `<p`;
+  }
+  if (endTag == undefined) {
+    endTag = `</p>`;
+  }
   let endingTagsLeft = 0;
   for (let i = fromIndex; i < text.length ; i++) {
-    if (text.substring(i, i + 2) == `<p`) {
+    if (text.substring(i, i + startTag.length) == startTag) {
       endingTagsLeft++;
-    } else if (text.substring(i, i + 4) == `</p>`) {
+    } else if (text.substring(i, i + endTag.length) == endTag) {
       endingTagsLeft--;
       if (endingTagsLeft == 0){
-        return i + 4;
+        return i + endTag.length;
       }
     }
   }
@@ -100,7 +106,6 @@ function findAllCategoryIntervals(): CategoryInterval[] {
     const startIndex = currentIndex;
     currentIndex = checkForWordInString(text, CATEGORY_TAG, endOfTagIndex);
     if (currentIndex == -1) {
-      // console.debug("-1 from finding index of category.");
       categories.push({fromInclusive: startIndex, toExclusive: text.length, categoryName: currentCategory});
       break;
     }
@@ -110,7 +115,6 @@ function findAllCategoryIntervals(): CategoryInterval[] {
     endOfTagIndex = findEndOfTag(text, currentIndex);
     currentCategory = html2text(text.substring(currentIndex, endOfTagIndex));
   }
-  // console.log(categories);
   return categories;
 }
 
@@ -120,7 +124,7 @@ type Chunk = {
   diagnosis: string,
 };
 
-function generateDoc(): Chunk[] {
+function findDiagnosisChunks(): Chunk[] {
   const text = fs.readFileSync(path.join(dsmWebPagePath, "dsm_norsk_nettside.html"), 'utf-8');
   const DIAGNOSIS_TAG = `<p class="firetegnoverskrift0">`;
 
@@ -138,7 +142,6 @@ function generateDoc(): Chunk[] {
       const startIndex = currentIndex;
       currentIndex = checkForWordInString(text, DIAGNOSIS_TAG, endOfTagIndex, foundCategoryIntervals[i]?.toExclusive);
       if (currentIndex == -1) {
-        // console.debug("-1 from finding index of diagnosis.");
         generatedChunks.push({text: html2text(text.substring(startIndex, foundCategoryIntervals[i]?.toExclusive as number)), category: foundCategoryIntervals[i]?.categoryName as string, diagnosis: currentDiagnosis });
         break;
       }
@@ -149,13 +152,7 @@ function generateDoc(): Chunk[] {
       currentDiagnosis = html2text(text.substring(currentIndex, endOfTagIndex));
     }
   }
-  // console.log(JSON.stringify(generatedChunks));
   return generatedChunks;
-}
-
-
-function removeSpacingInString(text: string): string {
-  return text.replace(/\s/g,'');
 }
 
 function createManyFilesFromArray(diagnosisArray: Chunk[]): void {
