@@ -1,22 +1,28 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 import path from "path";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { JSDOM } from "jsdom";
 import fs from "fs";
 import { Document } from "langchain/document";
-import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { type OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { embeddings } from "~/utils/weaviate/embeddings";
 import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import { client } from "~/utils/weaviate/client";
 import { MergerRetriever } from "~/utils/weaviate/MergerRetriever";
 import { z } from "zod";
+import { Configuration, OpenAIApi } from "openai";
+import { env } from "~/env.mjs";
+
+const configuration = new Configuration({
+  apiKey: env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
 
 const dirPath = path.join(process.cwd(), "public", "documents", "DSM");
 
 const dsmWebPagePath = path.join(process.cwd(), "public");
 
 export const dsmRouter = createTRPCRouter({
-
-
   createFileAndEmbedd: publicProcedure.mutation(async () => {
     console.log("testing!");
 
@@ -41,43 +47,82 @@ export const dsmRouter = createTRPCRouter({
     return 5;
   }),
 
-
   queryTheDatabase: publicProcedure
 
-  .input(z.string())
+    .input(z.string())
 
-  .mutation(async ({input}) => {
-    const question = input;
+    .mutation(async ({ input }) => {
+      const query_description = input;
 
-    const metadataKeys: string[] = [
-      "diagnosisName",
-      "categoryName",
-    ];
+      const symptoms = await openai.createChatCompletion({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `Extract a list of symptoms from this description of a psychosomatic or psychological disease: ${query_description}.`,
+          },
+        ],
+        temperature: 1,
+      });
 
-    const indexName = "DSM";
+      const symptoms_response = symptoms.data.choices[0]?.message?.content;
+      console.debug("symptoms_response: ", symptoms_response);
 
-    const arrayOfVectorStores = await WeaviateStore.fromExistingIndex(embeddings, {
-      client, 
-      indexName,
-      metadataKeys,
-    });
+      const metadataKeys: string[] = ["diagnosisName", "categoryName"];
 
-    const NUM_SOURCES = 5;
-    const SIMILARITY_THRESHOLD = 0.3;
+      const indexName = "DSM";
 
-    const retriever = new MergerRetriever(
-      [arrayOfVectorStores],
-      NUM_SOURCES,
-      SIMILARITY_THRESHOLD,
-    )
+      const arrayOfVectorStores = await WeaviateStore.fromExistingIndex(
+        embeddings,
+        {
+          client,
+          indexName,
+          metadataKeys,
+        }
+      );
 
-    const documents = await retriever.getRelevantDocuments(question);
-    console.debug("\n QUERY RESULTS: ")
-    console.debug(documents);
-    return documents;
-  })
+      const NUM_SOURCES = 5;
+      const SIMILARITY_THRESHOLD = 0.3;
 
+      const retriever = new MergerRetriever(
+        [arrayOfVectorStores],
+        NUM_SOURCES,
+        SIMILARITY_THRESHOLD
+      );
 
+      const documents = await retriever.getRelevantDocuments(
+        symptoms_response as string
+      );
+
+      console.debug("\n QUERY RESULTS: ");
+      // console.debug(documents);
+
+      // Making chatGPT evaluate the correlation between the symptoms and the
+
+      const listOfEvaluations = await Promise.all(
+        documents.map(async (elem) => {
+          const completion = await openai.createChatCompletion({
+            model: "gpt-4",
+            messages: [
+              {
+                role: "system",
+                content: `Give an evaluation of how much the given input description matches the diagnosis description. Finally in your response, give a match score on the format: (#/100), where "#" is a score of how much the descriptions match out of a hundred\n\n. Input description: ${query_description}. \n\n Diagnosis: ${elem.pageContent}. \n\n Evaluation with score at the end: `,
+              },
+            ],
+            temperature: 1,
+          });
+
+          return completion.data.choices[0]?.message?.content as string;
+        })
+      );
+
+      for (let i = 0 ; i < 5 ; i++){
+        console.debug("\nDiagnosis: ", documents[i]);
+        console.debug("ChatGPT evaluation: ", listOfEvaluations[i]);
+      }
+
+      return documents;
+    }),
 });
 
 async function createVectorStoreFromDocuments(
