@@ -72,6 +72,7 @@ export const dsmRouter = createTRPCRouter({
     )
 
     const documents = await retriever.getRelevantDocuments(question);
+    console.debug("\n QUERY RESULTS: ")
     console.debug(documents);
     return documents;
   })
@@ -90,7 +91,7 @@ async function createVectorStoreFromDocuments(
   );
   await WeaviateStore.fromDocuments(splits, embeddings, {
     client,
-    indexName: indexName,
+    indexName,
   })
     .then(() => {
       console.debug(`- Vector store created (${indexName})`);
