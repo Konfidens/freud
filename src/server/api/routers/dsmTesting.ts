@@ -86,7 +86,7 @@ export const dsmRouter = createTRPCRouter({
       );
 
       const documents = await retriever.getRelevantDocuments(
-        symptoms_response as string
+        query_description
       );
 
       // Making chatGPT evaluate the correlation between the symptoms and the
