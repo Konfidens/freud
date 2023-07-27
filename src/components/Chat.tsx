@@ -113,25 +113,55 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    //Quickfix for empty query
-    if (query.length == 0) {
-      return;
+    // //Quickfix for empty query
+    // if (query.length == 0) {
+    //   return;
+    // }
+
+    // setIsLoadingReply(true);
+    // const message = {
+    //   role: Role.User,
+    //   content: query,
+    // };
+    // setMessages([...messages, message]);
+    // mutation.mutate({ messages: [...messages, message], categories });
+    
+    console.log("\nQuerying!");
+    queryDSM.mutate(query);
+
+  }
+
+  const createDSM = api.dsm.createFileAndEmbedd.useMutation({
+    onSuccess: (data) => {
+      if (!data) {
+        throw new Error("Data not defined in OnSuccess")
+      }
+      console.log("\ndata coming:");
+      console.log(data);
+      console.log("HEI!!!!!!");
     }
+  })
 
-    setIsLoadingReply(true);
-    const message = {
-      role: Role.User,
-      content: query,
-    };
-    setMessages([...messages, message]);
-    mutation.mutate({ messages: [...messages, message], categories });
+  const queryDSM = api.dsm.queryTheDatabase.useMutation({
+    onSuccess: (data) => {
+      if (!data) {
+        throw new Error("Data not defined in OnSuccess")
+      }
+      console.log("\nquery result:")
 
+      console.log(data);
+    }
+  })
+
+  function createDSMButton(){
+    createDSM.mutate();
   }
 
 
 
   return (
     <>
+      <Button onClick={createDSMButton} >Create files for diagnosis, and embedd to vectorStore !</Button>
       <div
         className={`min-h-[1rem] w-full text-2xl transition-all duration-1000 ${messages.length > 0 ? "grow" : ""
           } flex flex-col items-center`}

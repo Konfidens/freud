@@ -7,6 +7,8 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { embeddings } from "~/utils/weaviate/embeddings";
 import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import { client } from "~/utils/weaviate/client";
+import { MergerRetriever } from "~/utils/weaviate/MergerRetriever";
+import { z } from "zod";
 
 const dirPath = path.join(process.cwd(), "public", "documents", "DSM");
 
@@ -15,7 +17,7 @@ const dsmWebPagePath = path.join(process.cwd(), "public");
 export const dsmRouter = createTRPCRouter({
 
 
-  createFileAndEmbedd: publicProcedure.mutation(() => {
+  createFileAndEmbedd: publicProcedure.mutation(async () => {
     console.log("testing!");
 
     // Creating the file
@@ -34,16 +36,45 @@ export const dsmRouter = createTRPCRouter({
       });
     });
 
-    // await createVectorStoreFromDocuments("DSM", docs, embeddings);
+    await createVectorStoreFromDocuments("DSM", docs, embeddings);
 
     return 5;
   }),
 
 
-  // queryTheDatabase: publicProcedure
-  // .mutation(async () => {
+  queryTheDatabase: publicProcedure
 
-  // })
+  .input(z.string())
+
+  .mutation(async ({input}) => {
+    const question = input;
+
+    const metadataKeys: string[] = [
+      "diagnosisName",
+      "categoryName",
+    ];
+
+    const indexName = "DSM";
+
+    const arrayOfVectorStores = await WeaviateStore.fromExistingIndex(embeddings, {
+      client, 
+      indexName,
+      metadataKeys,
+    });
+
+    const NUM_SOURCES = 5;
+    const SIMILARITY_THRESHOLD = 0.3;
+
+    const retriever = new MergerRetriever(
+      [arrayOfVectorStores],
+      NUM_SOURCES,
+      SIMILARITY_THRESHOLD,
+    )
+
+    const documents = await retriever.getRelevantDocuments(question);
+    console.debug(documents);
+    return documents;
+  })
 
 
 });

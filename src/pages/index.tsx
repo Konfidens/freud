@@ -23,21 +23,6 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [categories, setCategories] = useState<Categories>({});
 
-  const testingDSM = api.dsm.createFileAndEmbedd.useMutation({
-    onSuccess: (data) => {
-      if (!data) {
-        throw new Error("Data not defined in OnSuccess")
-      }
-      console.log("\ndata coming:");
-      console.log(data);
-      console.log("HEI!!!!!!");
-    }
-  })
-
-  function testingButton(){
-    testingDSM.mutate();
-  }
-
   const fetchedCategories = api.weaviate.listSchemas.useMutation({
     onSuccess: (data) => {
       if (!data) {
@@ -88,7 +73,6 @@ export default function Home() {
         <div />
         <div />
         <Header chatStarted={messages.length > 0} />
-        <Button onClick={testingButton} >This is the best button</Button>
         <Chat
           messages={messages}
           setMessages={setMessages}
