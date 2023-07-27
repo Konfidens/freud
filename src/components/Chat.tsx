@@ -126,6 +126,7 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
     // setMessages([...messages, message]);
     // mutation.mutate({ messages: [...messages, message], categories });
     
+    // Testing the DSM diagnosis module
     console.log("\nQuerying!");
     queryDSM.mutate(query);
 
@@ -136,9 +137,6 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
       if (!data) {
         throw new Error("Data not defined in OnSuccess")
       }
-      console.log("\ndata coming:");
-      console.log(data);
-      console.log("HEI!!!!!!");
     }
   })
 
@@ -147,17 +145,12 @@ const Chat = ({ messages, setMessages, categories }: Prop) => {
       if (!data) {
         throw new Error("Data not defined in OnSuccess")
       }
-      console.log("\nquery result:")
-
-      console.log(data);
     }
   })
 
   function createDSMButton(){
     createDSM.mutate();
   }
-
-
 
   return (
     <>

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
 import path from "path";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { JSDOM } from "jsdom";
@@ -19,19 +18,17 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 const dirPath = path.join(process.cwd(), "public", "documents", "DSM");
-
 const dsmWebPagePath = path.join(process.cwd(), "public");
 
 export const dsmRouter = createTRPCRouter({
+
   createFileAndEmbedd: publicProcedure.mutation(async () => {
-    console.log("testing!");
 
     // Creating the file
     const arrDiagnosis = findDiagnosisChunks();
     createOneFilesFromArray(arrDiagnosis);
 
-    // Try to embed
-
+    // Embedd to weaviate vectorStore
     const docs = arrDiagnosis.map((elem) => {
       return new Document({
         pageContent: elem.text,
@@ -43,8 +40,6 @@ export const dsmRouter = createTRPCRouter({
     });
 
     await createVectorStoreFromDocuments("DSM", docs, embeddings);
-
-    return 5;
   }),
 
   queryTheDatabase: publicProcedure
@@ -66,7 +61,7 @@ export const dsmRouter = createTRPCRouter({
       });
 
       const symptoms_response = symptoms.data.choices[0]?.message?.content;
-      console.debug("symptoms_response: ", symptoms_response);
+      console.debug("symptoms_response:\n", symptoms_response);
 
       const metadataKeys: string[] = ["diagnosisName", "categoryName"];
 
@@ -81,7 +76,7 @@ export const dsmRouter = createTRPCRouter({
         }
       );
 
-      const NUM_SOURCES = 5;
+      const NUM_SOURCES = 3;
       const SIMILARITY_THRESHOLD = 0.3;
 
       const retriever = new MergerRetriever(
@@ -94,11 +89,7 @@ export const dsmRouter = createTRPCRouter({
         symptoms_response as string
       );
 
-      console.debug("\n QUERY RESULTS: ");
-      // console.debug(documents);
-
       // Making chatGPT evaluate the correlation between the symptoms and the
-
       const listOfEvaluations = await Promise.all(
         documents.map(async (elem) => {
           const completion = await openai.createChatCompletion({
@@ -115,13 +106,12 @@ export const dsmRouter = createTRPCRouter({
           return completion.data.choices[0]?.message?.content as string;
         })
       );
-
-      for (let i = 0 ; i < 5 ; i++){
-        console.debug("\nDiagnosis: ", documents[i]);
-        console.debug("ChatGPT evaluation: ", listOfEvaluations[i]);
+    
+      console.debug("\n QUERY RESULTS: ");
+      for (let i = 0 ; i < NUM_SOURCES ; i++){
+        console.debug("\n", i.toString(), ". Diagnosis:\n", documents[i]);
+        console.debug("ChatGPT evaluation:\n", listOfEvaluations[i]);
       }
-
-      return documents;
     }),
 });
 
@@ -148,7 +138,6 @@ function html2text(html: string): string {
   const dom = new JSDOM();
   const tag = dom.window.document.createElement("div");
   tag.innerHTML = html;
-
   return tag.textContent || "";
 }
 
@@ -212,8 +201,9 @@ type CategoryInterval = {
 };
 
 function findAllCategoryIntervals(): CategoryInterval[] {
+  const webpageFileName = "dsm_norsk_nettside.html";
   const text = fs.readFileSync(
-    path.join(dsmWebPagePath, "dsm_norsk_nettside.html"),
+    path.join(dsmWebPagePath, webpageFileName),
     "utf-8"
   );
   const CATEGORY_TAG = `<p class="tretegnoverskrift">`;
@@ -256,8 +246,9 @@ type Chunk = {
 };
 
 function findDiagnosisChunks(): Chunk[] {
+  const webpageFileName = "dsm_norsk_nettside.html";
   const text = fs.readFileSync(
-    path.join(dsmWebPagePath, "dsm_norsk_nettside.html"),
+    path.join(dsmWebPagePath, webpageFileName),
     "utf-8"
   );
   const DIAGNOSIS_TAG = `<p class="firetegnoverskrift0">`;
