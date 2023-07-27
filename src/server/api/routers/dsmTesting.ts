@@ -92,14 +92,15 @@ type CategoryInterval = {
 }
 
 function findAllCategoryIntervals(): CategoryInterval[] {
-  const text = fs.readFileSync(path.join(dsmWebPagePath, "dsm_norsk_nettside.html"), 'utf-8');
-  const CATEGORY_TAG = `<p class="tretegnoverskrift">`;
+  const webPageFileName = "DSM_V_hele_nettsideformat.html";
+  const text = fs.readFileSync(path.join(dsmWebPagePath, webPageFileName), 'utf-8');
+  const CATEGORY_TAG = `<h2 class="chap-tit`;
 
   const categories: CategoryInterval[] = [];
 
   let currentCategory = ``;
   let currentIndex = checkForWordInString(text, CATEGORY_TAG, 0);
-  let endOfTagIndex = findEndOfTag(text, currentIndex);
+  let endOfTagIndex = findEndOfTag(text, currentIndex, `<h2`, `</h2>`);
   currentCategory = html2text(text.substring(currentIndex, endOfTagIndex));
 
   while (true) {
