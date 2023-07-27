@@ -23,7 +23,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [categories, setCategories] = useState<Categories>({});
 
-  const testingDSM = api.dsm.testing.useMutation({
+  const testingDSM = api.dsm.createFileAndEmbedd.useMutation({
     onSuccess: (data) => {
       if (!data) {
         throw new Error("Data not defined in OnSuccess")

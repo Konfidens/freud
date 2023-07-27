@@ -1,37 +1,71 @@
-// import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
-// import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import path from "path";
-import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { JSDOM } from "jsdom";
 import fs from "fs";
+import { Document } from "langchain/document";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { embeddings } from "~/utils/weaviate/embeddings";
+import { WeaviateStore } from "langchain/vectorstores/weaviate";
+import { client } from "~/utils/weaviate/client";
 
-const dirPath = path.join(
-  process.cwd(),
-  "public",
-  "documents",
-  "DSM",
-);
+const dirPath = path.join(process.cwd(), "public", "documents", "DSM");
 
-const dsmWebPagePath = path.join(
-  process.cwd(),
-  "public",
-);
+const dsmWebPagePath = path.join(process.cwd(), "public");
 
 export const dsmRouter = createTRPCRouter({
-  testing: publicProcedure.mutation(() => {
+
+
+  createFileAndEmbedd: publicProcedure.mutation(() => {
     console.log("testing!");
-    // return "testing tittes!";
-    // return countCharacters();
-    // return htmlDocSplitter(`<h1>This is heading 1</h1>`);
-    // return checkForWordInString("Hei jejeg har det velveldig bra!", "veldig", 0);
-    // return findEndOfTag(`<p clas<p></p></p>`, 0);
-    // return findAllCategoryIntervals();
-    const arrCategories = findDiagnosisChunks();
-    createManyFilesFromArray(arrCategories);
+
+    // Creating the file
+    const arrDiagnosis = findDiagnosisChunks();
+    createOneFilesFromArray(arrDiagnosis);
+
+    // Try to embed
+
+    const docs = arrDiagnosis.map((elem) => {
+      return new Document({
+        pageContent: elem.text,
+        metadata: {
+          diagnosisName: elem.diagnosis,
+          categoryName: elem.category,
+        },
+      });
+    });
+
+    // await createVectorStoreFromDocuments("DSM", docs, embeddings);
+
     return 5;
   }),
+
+
+  // queryTheDatabase: publicProcedure
+  // .mutation(async () => {
+
+  // })
+
+
 });
+
+async function createVectorStoreFromDocuments(
+  indexName: string,
+  splits: Document<Record<string, any>>[],
+  embeddings: OpenAIEmbeddings
+) {
+  // Create the vector store
+  console.debug(
+    `- Create vector store (this may take a while...) (${indexName})`
+  );
+  await WeaviateStore.fromDocuments(splits, embeddings, {
+    client,
+    indexName: indexName,
+  })
+    .then(() => {
+      console.debug(`- Vector store created (${indexName})`);
+    })
+    .catch((error: Error) => console.error(error));
+}
 
 function html2text(html: string): string {
   const dom = new JSDOM();
@@ -41,19 +75,24 @@ function html2text(html: string): string {
   return tag.textContent || "";
 }
 
-
-function checkForWordInString(text: string, word: string, fromIndex: number, toIndex?: number): number { // Gives starting index of the word in the string
+function checkForWordInString(
+  text: string,
+  word: string,
+  fromIndex: number,
+  toIndex?: number
+): number {
+  // Gives starting index of the word in the string
   let wordIndex = 0;
   if (toIndex == undefined) {
     toIndex = text.length;
   }
-  for (let i = fromIndex; i < toIndex ; i++ ) {
-    if (text[i] == word[wordIndex]){
+  for (let i = fromIndex; i < toIndex; i++) {
+    if (text[i] == word[wordIndex]) {
       wordIndex++;
       if (wordIndex == word.length) {
         return i - wordIndex + 1;
       }
-    } else if (text[i] == word[0]){
+    } else if (text[i] == word[0]) {
       wordIndex = 1;
     } else {
       wordIndex = 0;
@@ -62,8 +101,12 @@ function checkForWordInString(text: string, word: string, fromIndex: number, toI
   return -1;
 }
 
-
-function findEndOfTag(text: string, fromIndex: number, startTag?: string, endTag?: string): number {
+function findEndOfTag(
+  text: string,
+  fromIndex: number,
+  startTag?: string,
+  endTag?: string
+): number {
   // assume <p></p> tag
   if (startTag == undefined) {
     startTag = `<p`;
@@ -72,12 +115,12 @@ function findEndOfTag(text: string, fromIndex: number, startTag?: string, endTag
     endTag = `</p>`;
   }
   let endingTagsLeft = 0;
-  for (let i = fromIndex; i < text.length ; i++) {
+  for (let i = fromIndex; i < text.length; i++) {
     if (text.substring(i, i + startTag.length) == startTag) {
       endingTagsLeft++;
     } else if (text.substring(i, i + endTag.length) == endTag) {
       endingTagsLeft--;
-      if (endingTagsLeft == 0){
+      if (endingTagsLeft == 0) {
         return i + endTag.length;
       }
     }
@@ -86,13 +129,16 @@ function findEndOfTag(text: string, fromIndex: number, startTag?: string, endTag
 }
 
 type CategoryInterval = {
-  fromInclusive: number,
-  toExclusive: number,
-  categoryName: string,
-}
+  fromInclusive: number;
+  toExclusive: number;
+  categoryName: string;
+};
 
 function findAllCategoryIntervals(): CategoryInterval[] {
-  const text = fs.readFileSync(path.join(dsmWebPagePath, "dsm_norsk_nettside.html"), 'utf-8');
+  const text = fs.readFileSync(
+    path.join(dsmWebPagePath, "dsm_norsk_nettside.html"),
+    "utf-8"
+  );
   const CATEGORY_TAG = `<p class="tretegnoverskrift">`;
 
   const categories: CategoryInterval[] = [];
@@ -106,10 +152,18 @@ function findAllCategoryIntervals(): CategoryInterval[] {
     const startIndex = currentIndex;
     currentIndex = checkForWordInString(text, CATEGORY_TAG, endOfTagIndex);
     if (currentIndex == -1) {
-      categories.push({fromInclusive: startIndex, toExclusive: text.length, categoryName: currentCategory});
+      categories.push({
+        fromInclusive: startIndex,
+        toExclusive: text.length,
+        categoryName: currentCategory,
+      });
       break;
     }
-    categories.push({fromInclusive: startIndex, toExclusive: currentIndex, categoryName: currentCategory});
+    categories.push({
+      fromInclusive: startIndex,
+      toExclusive: currentIndex,
+      categoryName: currentCategory,
+    });
 
     // Set next
     endOfTagIndex = findEndOfTag(text, currentIndex);
@@ -119,33 +173,58 @@ function findAllCategoryIntervals(): CategoryInterval[] {
 }
 
 type Chunk = {
-  text: string,
-  category: string,
-  diagnosis: string,
+  text: string;
+  category: string;
+  diagnosis: string;
 };
 
 function findDiagnosisChunks(): Chunk[] {
-  const text = fs.readFileSync(path.join(dsmWebPagePath, "dsm_norsk_nettside.html"), 'utf-8');
+  const text = fs.readFileSync(
+    path.join(dsmWebPagePath, "dsm_norsk_nettside.html"),
+    "utf-8"
+  );
   const DIAGNOSIS_TAG = `<p class="firetegnoverskrift0">`;
 
   const generatedChunks: Chunk[] = [];
 
   const foundCategoryIntervals = findAllCategoryIntervals();
 
-  for (let i = 0 ; i < foundCategoryIntervals.length ; i++ ) {
+  for (let i = 0; i < foundCategoryIntervals.length; i++) {
     let currentDiagnosis = ``;
-    let currentIndex = checkForWordInString(text, DIAGNOSIS_TAG, foundCategoryIntervals[i]?.fromInclusive as number);
+    let currentIndex = checkForWordInString(
+      text,
+      DIAGNOSIS_TAG,
+      foundCategoryIntervals[i]?.fromInclusive as number
+    );
     let endOfTagIndex = findEndOfTag(text, currentIndex);
     currentDiagnosis = html2text(text.substring(currentIndex, endOfTagIndex));
 
-    while( true ) {
+    while (true) {
       const startIndex = currentIndex;
-      currentIndex = checkForWordInString(text, DIAGNOSIS_TAG, endOfTagIndex, foundCategoryIntervals[i]?.toExclusive);
+      currentIndex = checkForWordInString(
+        text,
+        DIAGNOSIS_TAG,
+        endOfTagIndex,
+        foundCategoryIntervals[i]?.toExclusive
+      );
       if (currentIndex == -1) {
-        generatedChunks.push({text: html2text(text.substring(startIndex, foundCategoryIntervals[i]?.toExclusive as number)), category: foundCategoryIntervals[i]?.categoryName as string, diagnosis: currentDiagnosis });
+        generatedChunks.push({
+          text: html2text(
+            text.substring(
+              startIndex,
+              foundCategoryIntervals[i]?.toExclusive as number
+            )
+          ),
+          category: foundCategoryIntervals[i]?.categoryName as string,
+          diagnosis: currentDiagnosis,
+        });
         break;
       }
-      generatedChunks.push({text: html2text(text.substring(startIndex, currentIndex)), category: foundCategoryIntervals[i]?.categoryName as string, diagnosis: currentDiagnosis });
+      generatedChunks.push({
+        text: html2text(text.substring(startIndex, currentIndex)),
+        category: foundCategoryIntervals[i]?.categoryName as string,
+        diagnosis: currentDiagnosis,
+      });
 
       // Set next
       endOfTagIndex = findEndOfTag(text, currentIndex);
@@ -156,7 +235,24 @@ function findDiagnosisChunks(): Chunk[] {
 }
 
 function createManyFilesFromArray(diagnosisArray: Chunk[]): void {
-  diagnosisArray.forEach((elem)=>{
-    fs.writeFileSync(path.join(dirPath, elem.diagnosis.replace(/\s/g,'').replace(/[\/\\?%*:|"<>\.]/g, '_')).concat(".json"), JSON.stringify(elem), {flag: 'w'});
-  })
+  diagnosisArray.forEach((elem) => {
+    fs.writeFileSync(
+      path
+        .join(
+          dirPath,
+          elem.diagnosis.replace(/\s/g, "").replace(/[\/\\?%*:|"<>\.]/g, "_")
+        )
+        .concat(".json"),
+      JSON.stringify(elem),
+      { flag: "w" }
+    );
+  });
+}
+
+function createOneFilesFromArray(diagnosisArray: Chunk[]): void {
+  fs.writeFileSync(
+    path.join(dirPath, "all_diagnosis.json"),
+    JSON.stringify(diagnosisArray),
+    { flag: "w" }
+  );
 }
