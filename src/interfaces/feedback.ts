@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ThumbState } from "@prisma/client";
 
 export const Feedback = z.object({
+  id: z.number().optional(),
   name: z.string().optional(),
   email: z.string().optional(),
   thumb: z.nativeEnum(ThumbState),

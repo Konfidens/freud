@@ -13,6 +13,8 @@ export const env = createEnv({
     WEAVIATE_SCHEME: z.string(),
     WEAVIATE_HOST: z.string(),
     DATABASE_URL: z.string(),
+    SLACK_WEBHOOK_URL: z.string(),
+    SLACK_WEBHOOK_TOKEN: z.string(),
   },
 
   /**
@@ -36,6 +38,8 @@ export const env = createEnv({
     WEAVIATE_SCHEME: process.env.WEAVIATE_SCHEME,
     WEAVIATE_HOST: process.env.WEAVIATE_HOST,
     DATABASE_URL: process.env.DATABASE_URL,
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
+    SLACK_WEBHOOK_TOKEN: process.env.SLACK_WEBHOOK_TOKEN,
     NEXT_PUBLIC_NODE_ENV: process.env.NODE_ENV
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
