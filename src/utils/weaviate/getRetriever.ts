@@ -5,7 +5,7 @@ import { embeddings } from "./embeddings";
 
 const indexes: string[] = ["CBT", "ISTDP"];
 
-const metadataKeys: string[] = [
+export const metadataKeys: string[] = [
   "author",
   "category",
   "chapter",

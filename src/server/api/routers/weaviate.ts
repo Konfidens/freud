@@ -16,6 +16,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { type weaviateMetadataDictionary } from "~/types/weaviateMetadata";
 import { client } from "~/utils/weaviate/client";
 import { embeddings } from "~/utils/weaviate/embeddings";
+import { metadataKeys } from "~/utils/weaviate/getRetriever";
 
 // Combine metadata dictionaries into one dictionary
 const metadataDictionary: weaviateMetadataDictionary = Object.assign(
@@ -101,6 +102,54 @@ export const weaviateRouter = createTRPCRouter({
       } catch (error) {
         console.error(error);
       }
+    }),
+
+  listObjects2: publicProcedure
+
+    .input(z.string())
+
+    .mutation(async ({ input }) => {
+      return await client.graphql
+        .aggregate()
+        .withClassName(input)
+        .withGroupBy(["title"])
+        .withFields("groupedBy {value}")
+        .do()
+        .then((res) => {
+          // For each title, get a single object (text snippet) with that title
+          // Note: Each snippet that shares a title is supposed to have the same metadata
+          // TODO: Grouping by titles is not robust since multiple books can share title
+          // TODO: A solution could be to group by book IDs instead, which requires a unique ID to be assigned upon upload to weaviate
+
+          const promises = res.data.Aggregate[input].map((item) => {
+            const uniqueTitle = item.groupedBy.value; // Book title
+
+            // Get first object with this book title
+            return client.graphql
+              .get()
+              .withClassName(input)
+              .withFields(`${metadataKeys.join(" ")}`)
+              .withWhere({
+                operator: "Equal",
+                path: ["title"],
+                valueText: uniqueTitle,
+              })
+              .withLimit(1)
+              .do()
+              .then((res) => {
+                return res.data.Get[input][0];
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          });
+
+          // Wait for all the promises to resolve and return the array of objects
+          return Promise.all(promises);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
     }),
 
   /*
