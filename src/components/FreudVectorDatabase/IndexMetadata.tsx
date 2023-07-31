@@ -1,8 +1,13 @@
-import React from "react";
+import React, { type SetStateAction } from "react";
 import { type WeaviateClass } from "weaviate-ts-client";
 import { Table } from "../ui/table/Table";
 
-export const IndexMetadata = ({ weaviateClass }: WeaviateClass) => {
+type Props = {
+  weaviateClass: WeaviateClass;
+  setShow: React.Dispatch<SetStateAction<boolean>>;
+};
+
+export const IndexMetadata = ({ weaviateClass, setShow }: Props) => {
   const { class: _a, properties: _b, ...classSchema } = weaviateClass;
   const columns = [
     {
@@ -38,7 +43,7 @@ const TreeNode = ({ data, depth }) => {
   const DEPTH_OPENED = 5;
 
   const [isOpen, setIsOpen] = React.useState(
-    depth > 1 && depth <= DEPTH_OPENED ? true : false
+    depth !== 1 && depth <= DEPTH_OPENED ? true : false
   );
 
   const toggleOpen = () => {

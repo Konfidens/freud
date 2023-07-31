@@ -12,7 +12,7 @@ const Dashboard = ({}) => {
     WeaviateClass[] | null
   >(null);
   const [showDetails, setShowDetails] = React.useState<{
-    [key: string]: boolean;
+    [key: number]: boolean;
   }>({});
 
   const vectorStoreSchemas = api.weaviate.listSchemas.useMutation({
@@ -28,12 +28,6 @@ const Dashboard = ({}) => {
     vectorStoreSchemas.mutate();
   }, []);
 
-  function handleSetShowDetails(idx: number, value: boolean) {
-    setShowDetails((prevShowDetails) => {
-      return { ...prevShowDetails, [idx]: value };
-    });
-  }
-
   return (
     <>
       <Head>
@@ -41,7 +35,7 @@ const Dashboard = ({}) => {
         <link rel="icon" href="/sigmund_freud_avatar.png" />
       </Head>
       <main
-        className={`flex min-h-screen flex-col items-center justify-between bg-beige100 pb-8`}
+        className={`flex min-h-screen flex-col justify-between bg-beige100 pb-36 pl-36 pr-36`}
       >
         <Header chatStarted={true} />
         {vectorSchemas !== null ? (
@@ -50,13 +44,10 @@ const Dashboard = ({}) => {
               setShowDetails({ ...showDetails, [idx]: false });
             }
             return (
-              <div
-                key={"div-container-" + idx.toString()}
-                className="flex items-baseline"
-              >
-                <ButtonMinimal
-                  key={"button-" + idx.toString()}
-                  className="mr-2 text-xl font-bold"
+              <>
+                <div
+                  key={"div-container-" + idx.toString()}
+                  className="flex cursor-pointer items-baseline"
                   onClick={() =>
                     setShowDetails({
                       ...showDetails,
@@ -64,20 +55,21 @@ const Dashboard = ({}) => {
                     })
                   }
                 >
-                  {showDetails[idx] ? "-" : "+"}
-                </ButtonMinimal>
-                <IndexViewContainer
-                  key={"index-" + idx.toString()}
-                  weaviateClass={schema}
-                  showDetails={showDetails[idx] ?? false}
-                  onClick={() =>
-                    setShowDetails({
-                      ...showDetails,
-                      [idx]: !showDetails[idx],
-                    })
-                  }
-                />
-              </div>
+                  <ButtonMinimal
+                    key={"button-" + idx.toString()}
+                    className="mr-2 text-xl font-bold"
+                  >
+                    {showDetails[idx] ? "-" : "+"}
+                  </ButtonMinimal>
+                  <h2 className="text-2xl font-bold">{schema.class}</h2>
+                </div>
+                {showDetails[idx] && (
+                  <IndexViewContainer
+                    key={"index-" + idx.toString()}
+                    weaviateClass={schema}
+                  />
+                )}
+              </>
             );
           })
         ) : (

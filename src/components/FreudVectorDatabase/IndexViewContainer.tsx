@@ -6,13 +6,12 @@ import { IndexObjectList } from "./IndexObjectList";
 
 type Props = {
   weaviateClass: WeaviateClass;
-  showDetails: boolean;
 };
 
-export const IndexViewContainer = ({ weaviateClass, showDetails }: Props) => {
-  const [objects, setObjects] = React.useState<{
-    [key: string]: { title: string; dbCount: number; splitCount: number }[];
-  }>({});
+export const IndexViewContainer = ({ weaviateClass }: Props) => {
+  const [objects, setObjects] = React.useState([]);
+  const [showMetadata, setShowMetadata] = React.useState(false);
+  const [showObjects, setShowObjects] = React.useState(false);
 
   const vectorStoreListObjects = api.weaviate.listObjectsFromSchema.useMutation(
     {
@@ -30,15 +29,30 @@ export const IndexViewContainer = ({ weaviateClass, showDetails }: Props) => {
     }
   );
 
+  {
+  }
   return (
-    <div className="mt-6">
-      <h2 className="text-2xl font-bold">{weaviateClass.class}</h2>
-      {showDetails && (
-        <>
-          <IndexMetadata weaviateClass={weaviateClass} />
-          <IndexObjectList classname={weaviateClass.class} />
-        </>
+    <div className="mb-6">
+      <h3
+        className="cursor-pointer text-xl font-semibold"
+        onClick={() => setShowMetadata(!showMetadata)}
+      >
+        Metadata
+      </h3>
+      {showMetadata && (
+        <IndexMetadata
+          weaviateClass={weaviateClass}
+          setShow={setShowMetadata}
+        />
       )}
+      <h3
+        className="cursor-pointer text-xl font-semibold"
+        onClick={() => setShowObjects(!showObjects)}
+      >
+        Dokumenter
+      </h3>
+
+      {showObjects && <IndexObjectList classname={weaviateClass.class} />}
     </div>
   );
 };
