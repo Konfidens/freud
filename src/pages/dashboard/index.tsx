@@ -5,11 +5,15 @@ import { IndexViewContainer } from "~/components/FreudVectorDatabase/IndexViewCo
 import Header from "~/components/Header";
 import { api } from "~/utils/api";
 import { Icon } from "~/components/ui/icon/Icon";
+import { ButtonMinimal } from "~/components/ui/buttonMinimal/ButtonMinimal";
 
 const Dashboard = ({}) => {
   const [vectorSchemas, setVectorSchemas] = React.useState<
     WeaviateClass[] | null
   >(null);
+  const [showDetails, setShowDetails] = React.useState<{
+    [key: string]: boolean;
+  }>({});
 
   const vectorStoreSchemas = api.weaviate.listSchemas.useMutation({
     onError: (error) => {
@@ -24,6 +28,12 @@ const Dashboard = ({}) => {
     vectorStoreSchemas.mutate();
   }, []);
 
+  function handleSetShowDetails(idx: number, value: boolean) {
+    setShowDetails((prevShowDetails) => {
+      return { ...prevShowDetails, [idx]: value };
+    });
+  }
+
   return (
     <>
       <Head>
@@ -35,9 +45,41 @@ const Dashboard = ({}) => {
       >
         <Header chatStarted={true} />
         {vectorSchemas !== null ? (
-          vectorSchemas.map((schema, idx) => (
-            <IndexViewContainer key={idx} weaviateClass={schema} />
-          ))
+          vectorSchemas.map((schema, idx) => {
+            if (!(idx in showDetails)) {
+              setShowDetails({ ...showDetails, [idx]: false });
+            }
+            return (
+              <div
+                key={"div-container-" + idx.toString()}
+                className="flex items-baseline"
+              >
+                <ButtonMinimal
+                  key={"button-" + idx.toString()}
+                  className="mr-2 text-xl font-bold"
+                  onClick={() =>
+                    setShowDetails({
+                      ...showDetails,
+                      [idx]: !showDetails[idx],
+                    })
+                  }
+                >
+                  {showDetails[idx] ? "-" : "+"}
+                </ButtonMinimal>
+                <IndexViewContainer
+                  key={"index-" + idx.toString()}
+                  weaviateClass={schema}
+                  showDetails={showDetails[idx] ?? false}
+                  onClick={() =>
+                    setShowDetails({
+                      ...showDetails,
+                      [idx]: !showDetails[idx],
+                    })
+                  }
+                />
+              </div>
+            );
+          })
         ) : (
           <Icon name="spinner" />
         )}

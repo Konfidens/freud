@@ -3,7 +3,12 @@ import { api } from "~/utils/api";
 import { type WeaviateClass } from "weaviate-ts-client";
 import { IndexMetadata } from "./IndexMetadata";
 
-export const IndexViewContainer = ({ weaviateClass }: WeaviateClass) => {
+type Props = {
+  weaviateClass: WeaviateClass;
+  showDetails: boolean;
+};
+
+export const IndexViewContainer = ({ weaviateClass, showDetails }: Props) => {
   const [objects, setObjects] = React.useState<{
     [key: string]: { title: string; dbCount: number; splitCount: number }[];
   }>({});
@@ -25,9 +30,9 @@ export const IndexViewContainer = ({ weaviateClass }: WeaviateClass) => {
   );
 
   return (
-    <div className="mb-8">
+    <div className="mt-6">
       <h2 className="text-2xl font-bold">{weaviateClass.class}</h2>
-      <IndexMetadata weaviateClass={weaviateClass} />
+      {showDetails && <IndexMetadata weaviateClass={weaviateClass} />}
     </div>
   );
 };
