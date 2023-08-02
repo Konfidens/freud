@@ -5,15 +5,20 @@ import MessageComponent from "./MessageComponent";
 import CopyButton from "./CopyButton";
 
 type Prop = {
+  chatId: string | null;
   messages: Message[];
 };
 
-const MessageList = ({ messages }: Prop) => {
+const MessageList = ({ chatId, messages }: Prop) => {
   return (
     <div>
       {messages.map((message, idx) => (
         <MessageComponent message={message} key={"message-" + idx.toString()}>
-          <FeedbackButtons chat={messages} key={"feedback-" + idx.toString()} />
+          <FeedbackButtons
+            chatId={chatId}
+            messageId={idx}
+            key={"feedback-" + idx.toString()}
+          />
           <CopyButton message={message} key={"copy-button-" + idx.toString()} />
         </MessageComponent>
       ))}

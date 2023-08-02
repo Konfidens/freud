@@ -14,6 +14,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [categories, setCategories] = useState<Categories>({});
+  const [diagnosisMode, setDiagnosisMode] = useState<boolean>(false);
 
   const fetchedCategories = api.weaviate.listSchemas.useMutation({
     onSuccess: (data) => {
@@ -72,7 +73,7 @@ export default function Home() {
               setCategories={setCategories}
             />
             {env.NEXT_PUBLIC_NODE_ENV == "development" && (
-              <VectorStoreSettings vectorStoreSchemas={fetchedCategories} />
+              <VectorStoreSettings vectorStoreSchemas={fetchedCategories} setDiagnosisMode={setDiagnosisMode} diagnosisMode={diagnosisMode}/>
             )}
           </>
         </SidebarFreud>
@@ -84,6 +85,7 @@ export default function Home() {
           messages={messages}
           setMessages={setMessages}
           categories={categories}
+          diagnosisMode={diagnosisMode}
         />
       </main>
     </>

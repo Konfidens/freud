@@ -38,7 +38,6 @@ export const FeedbackForm = ({
         <p className="mb-1">Både din kommentar og samtale vil bli sendt.</p>
         <TextArea
           id="feedback"
-          // className="h-[6rem]"
           style={inputStyle}
           onChange={(e) => setComment(e.target.value)}
           value={comment}

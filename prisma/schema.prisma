@@ -13,27 +13,53 @@ datasource db {
 }
 
 // Datamodelling
-model Message {
-  id         Int      @id @default(autoincrement())
-  role       String
-  content    String   @db.Text
-  sources    Json     @default("[]")
-  createdAt  DateTime @default(now())
-  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  feedbackId Int
 
+model Chat {
+  id        String    @id @default(uuid())
+  messages  Message[]
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id        Int
+  chat      Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId    String
+  role      String
+  content   String    @db.Text
+  createdAt DateTime  @default(now())
+  feedback  Feedback?
+  sources   Source[]
+
+  @@id([chatId, id])
   // https://www.prisma.io/docs/concepts/components/prisma-schema/relations/relation-mode#indexes
-  @@index([feedbackId])
+  @@index([chatId, id])
+}
+
+model Source {
+  id        Int
+  author    String?
+  content   String  @db.Text
+  title     String?
+  message   Message @relation(fields: [chatId, messageId], references: [chatId, id], onDelete: Cascade)
+  chatId    String
+  messageId Int
+
+  @@id([chatId, messageId, id])
+  @@index([chatId, messageId, id])
 }
 
 model Feedback {
-  id        Int       @id @default(autoincrement())
   name      String?
   email     String?
   thumb     ThumbState
   comment   String?    @db.Text //https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#mysql
-  messages  Message[]
-  createdAt DateTime  @default(now())
+  message   Message    @relation(fields: [chatId, messageId], references: [chatId, id], onDelete: Cascade)
+  chatId    String
+  messageId Int
+  createdAt DateTime   @default(now())
+
+  @@id([chatId, messageId])
+  @@index([chatId, messageId])
 }
 
 enum ThumbState {

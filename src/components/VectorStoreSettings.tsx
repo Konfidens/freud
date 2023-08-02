@@ -4,9 +4,11 @@ import { Button } from "./ui/button/Button";
 
 type Props = {
   vectorStoreSchemas: any;
+  setDiagnosisMode: React.Dispatch<React.SetStateAction<boolean>>,
+  diagnosisMode: boolean,
 }
 
-export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
+export const VectorStoreSettings = ({ vectorStoreSchemas, setDiagnosisMode, diagnosisMode }: Props) => {
   const [showObjectsInDatabase, setShowObjectsInDatabase] = React.useState<{
     [key: string]: boolean;
   }>({});
@@ -69,6 +71,7 @@ export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
 
   return (
     <>
+      <Button color={diagnosisMode ? "green" : "white"} onClick={() => setDiagnosisMode(!diagnosisMode)} className="ml-4">Diagnosis mode</Button>
       <div className="p-10">
         {vectorStoreSchemas.isLoading ||
           !vectorStoreSchemas.data ||

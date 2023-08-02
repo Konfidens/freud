@@ -10,13 +10,14 @@ import { Icon } from "./ui/icon/Icon";
 import { Popover } from "./ui/popover/Popover";
 
 type Props = {
-  chat: Message[];
+  chatId: string | null;
+  messageId: number;
 };
 
 // Delay before a de-selected thumb actually deletes the entry in the database
-const THUMB_DELETE_DELAY = 1000; // 2 seconds
+const THUMB_DELETE_DELAY = 1000; // 1 second
 
-const FeedbackButtons = ({ chat }: Props) => {
+const FeedbackButtons = ({ chatId, messageId }: Props) => {
   const [name, setName] = useState(localStorage.getItem("name") || "");
   const [email, setEmail] = useState(localStorage.getItem("email") || "");
   const [thumb, setThumb] = useState<ThumbState>(ThumbState.none);
@@ -25,21 +26,18 @@ const FeedbackButtons = ({ chat }: Props) => {
     up: false,
     down: false,
   });
-  const [feedbackID, setFeedbackID] = useState<number | null>(null);
+  const [feedbackIsSubmitted, setFeedbackIsSubmitted] = useState(false);
 
   useEffect(() => {
-    let thumbChangedToNone = true;
+    // Assume we should delete feedback if thumb set to ThumbState.none (i.e. unselected)
+    let deleteSignal = true;
 
     // Thumb is de-selected
-    // Delete feedback after a delay, unless a new thumb is selected in the meantime
-    // Note: feedbackID is set to null in the onSuccess function
-    if (thumb === ThumbState.none) {
-      // Only proceed with deletion if feedback exists
-      if (feedbackID === null) {
-        return;
-      }
+    if (thumb === ThumbState.none && feedbackIsSubmitted) {
+      // Delete feedback after a delay
       const deleteTimeout = setTimeout(() => {
-        if (thumbChangedToNone) {
+        // ... unless the delete signal is cancelled by a new thumb selection
+        if (deleteSignal) {
           deleteFeedback();
         }
       }, THUMB_DELETE_DELAY);
@@ -47,19 +45,11 @@ const FeedbackButtons = ({ chat }: Props) => {
       return () => clearTimeout(deleteTimeout);
     }
 
-    // Create new feedback entry in database (thumbs only)
-    if (feedbackID === null) {
-      createFeedback();
-    }
-
-    // Update existing feedback entry (thumbs only)
-    else {
-      updateThumbFeedback();
-    }
+    submitFeedback();
 
     return () => {
-      // If thumb changes before the delay, cancel the delete signal
-      thumbChangedToNone = false;
+      // If another thumb is selected, cancel the delete signal
+      deleteSignal = false;
     };
   }, [thumb]);
 
@@ -71,100 +61,58 @@ const FeedbackButtons = ({ chat }: Props) => {
       setName={setName}
       setEmail={setEmail}
       setComment={setComment}
-      handleSubmit={updateCommentFeedback}
+      handleSubmit={submitFeedback}
     />
   );
 
-  const createNewFeedback = api.feedback.create.useMutation({
+  const submitFeedbackMutation = api.prisma.submitFeedback.useMutation({
     onError: (error) => {
       console.error(error);
     },
-    onSuccess: (data) => {
-      console.info("Feedback sent!");
-      setFeedbackID(data.id);
+    onSuccess: () => {
+      setFeedbackIsSubmitted(true);
     },
   });
 
-  const deleteCreatedFeedback = api.feedback.delete.useMutation({
+  const deleteFeedbackMutation = api.prisma.deleteFeedback.useMutation({
     onError: (error) => {
       console.error(error);
     },
     onSuccess: () => {
       console.info("Feedback deleted");
-      setFeedbackID(null);
     },
   });
 
-  const addCommentToFeedback = api.feedback.setComment.useMutation({
-    onError: (error) => {
-      console.error(error);
-    },
-    onSuccess: () => {
-      console.info("Comment submitted");
-      setShowForm({ up: false, down: false });
-    },
-  });
+  function submitFeedback() {
+    if (thumb !== ThumbState.none) {
+      localStorage.setItem("email", email);
+      localStorage.setItem("name", name);
 
-  const setNewThumbFeedback = api.feedback.setThumb.useMutation({
-    onError: (error) => {
-      console.error(error);
-    },
-    onSuccess: () => {
-      console.debug("Thumbs " + thumb);
-    },
-  });
+      if (!chatId) {
+        throw new Error("Cannot submit feedback because chatId is not set");
+      }
 
-  function createFeedback() {
-    const feedback: Feedback = {
-      name: name,
-      email: email,
-      thumb: thumb,
-      messages: chat,
-    };
+      submitFeedbackMutation.mutate({
+        chatId,
+        messageId,
+        thumb,
+        name,
+        email,
+        comment,
+      });
 
-    createNewFeedback.mutate(feedback);
+      setFeedbackIsSubmitted(true);
+    }
   }
 
   function deleteFeedback() {
-    if (!feedbackID) {
-      console.error("Cannot delete feedback since feedbackID isn't set");
-      return;
+    if (chatId) {
+      setFeedbackIsSubmitted(false);
+      deleteFeedbackMutation.mutate({
+        chatId,
+        messageId,
+      });
     }
-
-    deleteCreatedFeedback.mutate({
-      feedbackID: feedbackID,
-    });
-  }
-
-  function updateThumbFeedback() {
-    if (!feedbackID) {
-      console.error("Cannot submit comment before feedbackID is set");
-      return;
-    }
-
-    const newThumb = {
-      feedbackID: feedbackID,
-      thumb: thumb,
-    };
-
-    setNewThumbFeedback.mutate(newThumb);
-  }
-
-  function updateCommentFeedback() {
-    localStorage.setItem("email", email);
-    localStorage.setItem("name", name);
-
-    if (!feedbackID) {
-      console.error("Cannot submit comment before feedbackID is set");
-      return;
-    }
-
-    const feedbackComment = {
-      feedbackID: feedbackID,
-      comment: comment,
-    };
-
-    addCommentToFeedback.mutate(feedbackComment);
   }
 
   return (
@@ -209,13 +157,11 @@ const FeedbackButtons = ({ chat }: Props) => {
           </ButtonWithTooltip>
         </Popover>
       </RadixTooltip.Provider>
-      {showForm.up === false &&
-        showForm.down === false &&
-        feedbackID !== null && (
-          <span className="absolute ml-4 w-fit text-base text-green750">
-            Takk for tilbakemelding!
-          </span>
-        )}
+      {!showForm.up && !showForm.down && feedbackIsSubmitted && (
+        <span className="absolute ml-4 w-fit text-base text-green750">
+          Takk for tilbakemelding!
+        </span>
+      )}
     </div>
   );
 };

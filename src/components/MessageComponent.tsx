@@ -11,59 +11,63 @@ type Prop = {
 const AVATAR_IMAGE_SIZE = 50;
 
 const MessageComponent = ({ message, children }: Prop) => {
-
   //initializes with length of sources (if sources are available) or is empty array
   const [scrollToId, setScrollToId] = useState<number>(-1);
 
   const formatLinks = (input: string): React.JSX.Element => {
     try {
-
       //Sometimes gpt wrongly outputs [Source 1] instead of [1], so we include it in regex.
       var regex = /\[[Source 0-9]+\]/i;
 
       if (!regex.test(input)) {
         // If it does not contain any source references
-        throw new Error("No sources found")
+        return <p className="whitespace-pre-wrap">{input}</p>;
+
+        throw new Error("No sources found");
       }
 
-      const goodspaces = input.replaceAll("\n", " \n")
-      const moregoodspaces = goodspaces.replaceAll("]", "] ")
+      const goodspaces = input.replaceAll("\n", " \n");
+      const moregoodspaces = goodspaces.replaceAll("]", "] ");
 
-      const splittext = moregoodspaces.split(' ');
+      const splittext = moregoodspaces.split(" ");
 
-      let outputlist: any[] = []
+      let outputlist: any[] = [];
 
       let mystring = "";
       splittext.map((split, idx) => {
         if (regex.test(split.trim())) {
-          outputlist.push(mystring)
-          mystring = ""
+          outputlist.push(mystring);
+          mystring = "";
           for (let i = 0; i < message.sources!.length; i++) {
             if (parseInt(split.trim().charAt(1)) == i + 1) {
-              outputlist.push(<button key={idx} className="text-blue600" onClick={() => {
-                setScrollToId(i);
-              }}>[{i + 1}]</button>)
+              outputlist.push(
+                <button
+                  key={idx}
+                  className="text-blue600"
+                  onClick={() => {
+                    setScrollToId(i);
+                  }}
+                >
+                  [{i + 1}]
+                </button>
+              );
             }
           }
         } else {
           mystring += split + " ";
         }
-      })
+      });
       outputlist.push(mystring);
 
-      const output = <p className='whitespace-pre-wrap'>
-        {outputlist}
-      </p>
+      const output = <p className="whitespace-pre-wrap">{outputlist}</p>;
 
       return output;
-    }
-    catch (error) {
+    } catch (error) {
       // Code above is bad. So if it breaks, sources wont be clickable.
-      console.log(error)
-      return <p>{input}</p>
+      console.log(error);
+      return <p className="whitespace-pre-wrap">{input}</p>;
     }
-  }
-
+  };
 
   return (
     <div className="container border-b-2 border-gray900 py-10">
@@ -76,9 +80,7 @@ const MessageComponent = ({ message, children }: Prop) => {
             width={AVATAR_IMAGE_SIZE}
             height={AVATAR_IMAGE_SIZE}
           />
-          <p className="pt-5 whitespace-pre-wrap">
-            {message.content}
-          </p>
+          <p className="whitespace-pre-wrap pt-5">{message.content}</p>
         </div>
       ) : (
         <div>
@@ -93,10 +95,13 @@ const MessageComponent = ({ message, children }: Prop) => {
             {children}
             {formatLinks(message.content)}
           </div>
-          {message.sources ?
-            <SourceList sources={message.sources} scrollToId={scrollToId} setScrollToId={setScrollToId} />
-            : null
-          }
+          {message.sources && (
+            <SourceList
+              sources={message.sources}
+              scrollToId={scrollToId}
+              setScrollToId={setScrollToId}
+            />
+          )}
         </div>
       )}
     </div>
