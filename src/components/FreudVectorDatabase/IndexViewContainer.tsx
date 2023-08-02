@@ -9,28 +9,9 @@ type Props = {
 };
 
 export const IndexViewContainer = ({ weaviateClass }: Props) => {
-  const [objects, setObjects] = React.useState([]);
   const [showMetadata, setShowMetadata] = React.useState(false);
   const [showObjects, setShowObjects] = React.useState(false);
 
-  const vectorStoreListObjects = api.weaviate.listObjectsFromSchema.useMutation(
-    {
-      onError: (error) => {
-        console.error(error);
-      },
-      onSuccess: (data) => {
-        if (data?.index !== undefined && data?.titles !== undefined) {
-          setObjects({
-            ...objects,
-            [data.index]: data.titles,
-          });
-        }
-      },
-    }
-  );
-
-  {
-  }
   return (
     <div className="mb-6">
       <h3
