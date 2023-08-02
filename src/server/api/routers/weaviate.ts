@@ -112,27 +112,28 @@ export const weaviateRouter = createTRPCRouter({
       return await client.graphql
         .aggregate()
         .withClassName(input)
-        .withGroupBy(["title"])
+        .withGroupBy(["filename"])
         .withFields("groupedBy {value}")
         .do()
         .then((res) => {
-          // For each title, get a single object (text snippet) with that title
-          // Note: Each snippet that shares a title is supposed to have the same metadata
-          // TODO: Grouping by titles is not robust since multiple books can share title
-          // TODO: A solution could be to group by book IDs instead, which requires a unique ID to be assigned upon upload to weaviate
+          // For each file, get a corresponding single object (text snippet)
+          // Notes:
+          // - Each snippet that shares a filename is supposed to have the same metadata
+          // - There won't be duplicate filenames within an index
+          // - It is probably better to store such metadata in a separate table than to duplicate it across all objects
 
           const promises = res.data.Aggregate[input].map((item) => {
-            const uniqueTitle = item.groupedBy.value; // Book title
+            const filename = item.groupedBy.value;
 
-            // Get first object with this book title
+            // Get first object with this filename
             return client.graphql
               .get()
               .withClassName(input)
               .withFields(`${metadataKeys.join(" ")}`)
               .withWhere({
                 operator: "Equal",
-                path: ["title"],
-                valueText: uniqueTitle,
+                path: ["filename"],
+                valueText: filename,
               })
               .withLimit(1)
               .do()
