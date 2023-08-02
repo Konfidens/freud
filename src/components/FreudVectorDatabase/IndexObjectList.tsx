@@ -2,6 +2,7 @@ import React from "react";
 import { type WeaviateObjectsList } from "weaviate-ts-client";
 import { api } from "~/utils/api";
 import { IndexObjectItem } from "./IndexObjectItem";
+import { Icon } from "../ui/icon/Icon";
 
 type Props = {
   classname: string;
@@ -25,6 +26,7 @@ export const IndexObjectList = ({ classname }: Props) => {
 
   return (
     <div>
+      {getObjects.isLoading && <Icon name="spinner" />}
       {objects.map((object, idx) => {
         return <IndexObjectItem key={idx} object={object} />;
       })}

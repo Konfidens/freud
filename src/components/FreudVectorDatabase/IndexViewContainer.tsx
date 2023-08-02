@@ -34,10 +34,10 @@ export const IndexViewContainer = ({ weaviateClass }: Props) => {
   return (
     <div className="mb-6">
       <h3
-        className="cursor-pointer text-xl font-semibold"
+        className="mb-2 mt-2 cursor-pointer text-xl font-semibold"
         onClick={() => setShowMetadata(!showMetadata)}
       >
-        Metadata
+        {showMetadata ? "-" : "+"} Metadata
       </h3>
       {showMetadata && (
         <IndexMetadata
@@ -46,10 +46,10 @@ export const IndexViewContainer = ({ weaviateClass }: Props) => {
         />
       )}
       <h3
-        className="cursor-pointer text-xl font-semibold"
+        className="mb-2 mt-2 cursor-pointer text-xl font-semibold"
         onClick={() => setShowObjects(!showObjects)}
       >
-        Dokumenter
+        {showObjects ? "-" : "+"} Dokumenter
       </h3>
 
       {showObjects && <IndexObjectList classname={weaviateClass.class} />}

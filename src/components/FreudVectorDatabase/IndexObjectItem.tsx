@@ -1,5 +1,4 @@
 import React from "react";
-import { WeaviateObject } from "weaviate-ts-client";
 
 export const IndexObjectItem = ({ object }) => {
   return (
