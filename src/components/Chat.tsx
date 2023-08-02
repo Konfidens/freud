@@ -129,6 +129,8 @@ const Chat = ({ messages, setMessages, categories, diagnosisMode }: Prop) => {
     };
     setMessages([...messages, message]);
     if (!diagnosisMode) {
+      setQueryMessages([]);
+      setSymptoms([]);
       mutation.mutate({ messages: [...messages, message], categories });
     }
     else {
