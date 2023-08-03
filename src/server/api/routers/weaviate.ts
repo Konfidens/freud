@@ -385,16 +385,16 @@ async function loadDocuments(indexName: string) {
         (key) => validKeys.includes(key) || delete document.metadata[key]
       );
 
-      // Split document
-      const split = await splitter.splitDocuments([document]);
-      splits.push(...split);
-
       const documentExistsInPrisma = existingDocuments.some(
         (doc) => doc.filename === filename
       );
 
       if (!documentExistsInPrisma) {
         try {
+          // Split document
+          const split = await splitter.splitDocuments([document]);
+          splits.push(...split);
+
           const filetype = getFileType(filename);
           insertManyDocumentData[filename] = {
             index: indexName,
