@@ -182,14 +182,38 @@ export const weaviateRouter = createTRPCRouter({
         continue;
       }
 
+      // Create vector store from documents
+      console.debug(
+        `- Create vector store (this may take a while...) (${indexName})`
+      );
+
       try {
-        // Create vector store from documents
-        await createVectorStoreFromDocuments(indexName, docs, embeddings);
+        // Max number of splits to submit to weaviate at the same time
+        // Too big of an array may cause a heap memory out of bounds issue
+        const chunkSize = 5000;
+        if (docs.length > chunkSize) {
+          console.debug(
+            " -> Many splits; submitting to Weaviate in several steps"
+          );
+          const shortArray = [];
+          for (let i = 0; i < docs.length; i += chunkSize) {
+            shortArray.push(docs.slice(i, i + chunkSize));
+          }
+          let i = 1;
+          for (const splits of shortArray) {
+            console.debug(` --> Submitting split ${i}`);
+            await createVectorStoreFromDocuments(indexName, splits, embeddings);
+            i++;
+          }
+        } else {
+          await createVectorStoreFromDocuments(indexName, docs, embeddings);
+        }
         console.debug(`** Index ${indexName} updated`);
       } catch (error) {
         console.error(error);
       }
     }
+    console.debug("Vector store procedure complete");
   }),
 });
 
@@ -431,16 +455,12 @@ async function createVectorStoreFromDocuments(
   splits: Document<Record<string, any>>[],
   embeddings: OpenAIEmbeddings
 ) {
-  // Create the vector store
-  console.debug(
-    `- Create vector store (this may take a while...) (${indexName})`
-  );
   await WeaviateStore.fromDocuments(splits, embeddings, {
     client,
     indexName: indexName,
   })
     .then(() => {
-      console.debug(`- Vector store created (${indexName})`);
+      return;
     })
     .catch((error: Error) => console.error(error));
 }
