@@ -5,13 +5,13 @@ import { Icon } from "../ui/icon/Icon";
 import { type Document } from "@prisma/client";
 
 type Props = {
-  streng: string;
+  weaviateclass: string;
 };
 
-export const IndexObjectList = ({ streng }: Props) => {
+export const IndexObjectList = ({ weaviateclass }: Props) => {
   const [documents, setDocuments] = React.useState<Document[]>([]);
 
-  const getObjects = api.updatemetadata.getAllRowsWithIndex.useMutation({
+  const getFiles = api.updatemetadata.getAllFilesFromIndex.useMutation({
     onError: (error) => {
       console.error(error);
     },
@@ -24,12 +24,12 @@ export const IndexObjectList = ({ streng }: Props) => {
   });
 
   React.useEffect(() => {
-    getObjects.mutate(streng);
+    getFiles.mutate(weaviateclass);
   }, []);
 
   return (
     <div>
-      {getObjects.isLoading && <Icon name="spinner" />}
+      {getFiles.isLoading && <Icon name="spinner" />}
       {documents.map((document, idx) => {
         return <IndexObjectItem key={idx} document={document} />;
       })}

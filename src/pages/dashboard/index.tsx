@@ -7,7 +7,7 @@ import { api } from "~/utils/api";
 import { Icon } from "~/components/ui/icon/Icon";
 import { ButtonMinimal } from "~/components/ui/buttonMinimal/ButtonMinimal";
 
-const Dashboard = ({}) => {
+const Dashboard = ({ }) => {
   const [vectorSchemas, setVectorSchemas] = React.useState<
     WeaviateClass[] | null
   >(null);
@@ -20,7 +20,7 @@ const Dashboard = ({}) => {
       console.error(error);
     },
     onSuccess: (data) => {
-      setVectorSchemas(data?.classes);
+      setVectorSchemas(data?.classes ?? null);
     },
   });
 

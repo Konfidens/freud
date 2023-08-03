@@ -10,7 +10,7 @@ type Props = {
 
 export const IndexViewContainer = ({ weaviateClass }: Props) => {
   const [showMetadata, setShowMetadata] = React.useState(false);
-  const [showObjects, setShowObjects] = React.useState(false);
+  const [showFiles, setShowFiles] = React.useState(false);
 
   return (
     <div className="mb-6">
@@ -28,12 +28,14 @@ export const IndexViewContainer = ({ weaviateClass }: Props) => {
       )}
       <h3
         className="mb-2 mt-2 cursor-pointer text-xl font-semibold"
-        onClick={() => setShowObjects(!showObjects)}
+        onClick={() => setShowFiles(!showFiles)}
       >
-        {showObjects ? "-" : "+"} Dokumenter
+        {showFiles ? "-" : "+"} Dokumenter
       </h3>
 
-      {showObjects && <IndexObjectList classname={weaviateClass.class} />}
+      {showFiles && weaviateClass.class && <IndexObjectList weaviateclass={weaviateClass.class} />}
+
+      {!weaviateClass.class && <p>weaviateClass.class er udefinert</p>}
     </div>
   );
 };

@@ -123,9 +123,9 @@ export const updatemetadataRouter = createTRPCRouter({
       });
     }),
 
-  getAllRowsWithIndex: publicProcedure
+  getAllFilesFromIndex: publicProcedure
 
-    .input(z.string())
+    .input(z.string().describe("index to get from"))
 
     .mutation(async ({ input }) => {
       const results = await prisma.document.findMany({
