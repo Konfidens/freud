@@ -2,7 +2,7 @@ import { readdirSync } from "fs";
 import type { Document } from "langchain/dist/document";
 import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 // import { EPubLoader } from "langchain/document_loaders/fs/epub";
-import { FileType } from "@prisma/client";
+import { FileType, type Prisma } from "@prisma/client";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import { type OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -293,6 +293,8 @@ async function loadDocuments(indexName: string) {
   // See https://js.langchain.com/docs/modules/indexes/document_loaders/examples/file_loaders/directory
   console.debug(`- Load documents (${indexName})`);
   const sourceDirectoryPath = path.join(rootDirectoryPath, indexName);
+  const pathSeparator = path.sep;
+
   const loader = new DirectoryLoader(path.join(sourceDirectoryPath), {
     ".pdf": (sourceDirectoryPath) =>
       new PDFLoader(sourceDirectoryPath, {
@@ -305,11 +307,8 @@ async function loadDocuments(indexName: string) {
   });
   const allDocs = await loader.load();
 
-  // Add custom metadata
-  console.debug(`- Clean document list and add metadata (${indexName})`);
-
   const validKeys = ["category", "filename", "loc"];
-  let splits: Array<Document<Record<string, any>>> = [];
+  const splits: Array<Document<Record<string, any>>> = [];
 
   // Define splitter
   const splitter = new RecursiveCharacterTextSplitter({
@@ -321,7 +320,9 @@ async function loadDocuments(indexName: string) {
   // Only documents with non-existing titles are added
   const existingDocuments = await getDocumentsFromPrisma(indexName);
 
-  const pathSeparator = path.sep;
+  // Dictionary holding documents that later will be added to the Document table in Prisma
+  const insertManyDocumentData: Record<string, Prisma.DocumentCreateManyInput> =
+    {};
 
   await Promise.all(
     allDocs.map(async (document) => {
@@ -336,16 +337,6 @@ async function loadDocuments(indexName: string) {
       const filename: string =
         document.metadata?.source?.split(pathSeparator).pop() ?? "";
 
-      if (
-        !existingDocuments ||
-        existingDocuments.some((doc) => doc.filename === filename)
-      ) {
-        // console.debug(`-> ${title} already exists in ${indexName}`);
-        return;
-      }
-
-      // console.debug(`-> Added ${filename} to ${indexName}`);
-
       // Add metadata to document
       document.metadata.category = indexName;
       document.metadata.filename = filename;
@@ -357,17 +348,34 @@ async function loadDocuments(indexName: string) {
 
       // Split document
       const split = await splitter.splitDocuments([document]);
-      splits = [...splits, ...split];
-      try {
-        existingDocuments.push(await addToPrisma(indexName, filename));
-      } catch (error) {
-        console.error(error);
-        return;
+      splits.push(...split);
+
+      const documentExistsInPrisma = existingDocuments.some(
+        (doc) => doc.filename === filename
+      );
+
+      if (!documentExistsInPrisma) {
+        try {
+          const filetype = getFileType(filename);
+          insertManyDocumentData[filename] = {
+            index: indexName,
+            filename,
+            filetype,
+          };
+        } catch (error) {
+          console.error(error);
+        }
       }
     })
   );
 
-  // Return early if there are no new documents
+  // Insert all new documents in the "Document" Prisma table
+  await prisma.document.createMany({
+    data: Object.values(insertManyDocumentData),
+    skipDuplicates: true,
+  });
+
+  // Console debug to inform that there are no new documents
   if (splits.length === 0) {
     console.debug("-> No new documents in " + indexName);
   }
@@ -422,18 +430,6 @@ async function createVectorStoreFromDocuments(
     .catch((error: Error) => console.error(error));
 }
 
-async function addToPrisma(index: string, filename: string) {
-  const filetype = getFileType(filename);
-
-  return await prisma.document.create({
-    data: {
-      index,
-      filename,
-      filetype,
-    },
-  });
-}
-
 function getFileType(filename: string) {
   const fileExtension = filename.split(".").pop();
 
@@ -456,6 +452,9 @@ async function getDocumentsFromPrisma(index: string) {
   return await prisma.document.findMany({
     where: {
       index,
+    },
+    select: {
+      filename: true,
     },
   });
 }
