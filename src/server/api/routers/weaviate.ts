@@ -225,6 +225,21 @@ async function createIndex(indexName: string) {
         dataType: ["text"],
         description: "Text snippet",
       },
+      {
+        name: "loc_lines_from",
+        dataType: ["int"],
+        description: "Line number where text snipper begins",
+      },
+      {
+        name: "loc_lines_to",
+        dataType: ["int"],
+        description: "Line number where text snippet ends",
+      },
+      {
+        name: "loc_pageNumber",
+        dataType: ["int"],
+        description: "Page number of text snippet",
+      },
     ],
   };
 
