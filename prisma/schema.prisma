@@ -79,7 +79,7 @@ model Document {
 }
 
 enum FileType {
-    epub
-    json
-    pdf
-  }
+  epub
+  json
+  pdf
+}
