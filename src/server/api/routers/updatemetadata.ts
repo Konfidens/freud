@@ -7,110 +7,94 @@ import { getExistingSchemas } from "./weaviate";
 
 const ROOTPATH = path.join(process.cwd(), "documents");
 
-
 type FileMetadata = {
-    year: number | undefined,
-    author: string | undefined,
-    title: string | undefined,
-    filename: string
-}
-
+  year: number | undefined;
+  author: string | undefined;
+  title: string | undefined;
+  filename: string;
+};
 
 const getLocalFilesData = (index: string) => {
-    const fs = require('fs');
-    const files: string[] = fs.readdirSync(ROOTPATH + "/" + index);
+  const fs = require("fs");
+  const files: string[] = fs.readdirSync(ROOTPATH + "/" + index);
 
-    const table: FileMetadata[] = [];
+  const table: FileMetadata[] = [];
 
-    files.slice(0).forEach((file: string) => {
+  files.slice(0).forEach((file: string) => {
+    const filename = file;
+    const splitfilename = file.split("__");
 
-        const filename = file;
-        const splitfilename = file.split("__")
+    let year: number | undefined;
+    let title: string | undefined;
+    let author: string | undefined;
 
+    try {
+      year = parseInt(splitfilename[0]!);
+    } catch (error) {
+      throw new Error("Not able to parse year for file: " + file);
+    }
 
-        let year: number | undefined;
-        let title: string | undefined;
-        let author: string | undefined;
+    try {
+      title = splitfilename[1]?.replaceAll("_", " ");
+    } catch (error) {
+      throw new Error("Not able to parse title for file: " + file);
+    }
 
-        try {
-            year = parseInt(splitfilename[0]!)
-        } catch (error) {
-            throw new Error("Not able to parse year for file: " + file);
-        }
+    try {
+      if (splitfilename.length == 3) {
+        author = splitfilename[2];
+      } else {
+        author = splitfilename[3];
+      }
 
+      author = author?.replaceAll("_", " ");
 
-        try {
-            title = splitfilename[1]?.replaceAll("_", " ")
-        } catch (error) {
-            throw new Error("Not able to parse title for file: " + file);
-        }
+      if (author?.split(".") != undefined && author?.split(".").length >= 1) {
+        author = author.split(".").slice(0, -1).toString();
+      }
+    } catch (error) {
+      throw new Error("Not able to parse author for file: " + file);
+    }
 
-
-        try {
-            if (splitfilename.length == 3) {
-                author = splitfilename[2]
-            } else {
-                author = splitfilename[3]
-            }
-
-            author = author?.replaceAll("_", " ")
-
-            if (author?.split(".") != undefined && author?.split(".").length! >= 1) {
-                author = author.split(".").slice(0, -1).toString()
-            }
-
-
-        } catch (error) {
-            throw new Error("Not able to parse author for file: " + file);
-        }
-
-        table.push({ year, title, author, filename })
-
-    });
-    return table
-}
-
+    table.push({ year, title, author, filename });
+  });
+  return table;
+};
 
 export const updatemetadataRouter = createTRPCRouter({
-    updatemetadata: publicProcedure
-        .mutation(async () => {
+  updatemetadata: publicProcedure.mutation(async () => {
+    const indexesFromDirectories: string[] = readdirSync(ROOTPATH, {
+      withFileTypes: true,
+    })
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name);
 
-            const indexesFromDirectories: string[] = readdirSync(ROOTPATH, {
-                withFileTypes: true,
-            }).filter((dirent) => dirent.isDirectory())
-                .map((dirent) => dirent.name);
+    indexesFromDirectories.forEach(async (dir) => {
+      const localMetadatas = getLocalFilesData(dir);
 
-
-            indexesFromDirectories.forEach(async (dir) => {
-
-                const localMetadatas = getLocalFilesData(dir)
-
-                localMetadatas.forEach(async (metadata) => {
-
-                    await prisma.document.updateMany({
-                        where: {
-                            index: dir,
-                            filename: metadata.filename,
-                            author: null,
-                        },
-                        data: {
-                            author: metadata.author
-                        }
-                    });
-                    await prisma.document.updateMany({
-                        where: {
-                            index: dir,
-                            filename: metadata.filename,
-                            title: null,
-                        },
-                        data: {
-                            title: metadata.author
-                        }
-                    });
-                    //TODO expand with year
-                })
-
-
-            })
-        }),
+      localMetadatas.forEach(async (metadata) => {
+        await prisma.document.updateMany({
+          where: {
+            index: dir,
+            filename: metadata.filename,
+            author: null,
+          },
+          data: {
+            author: metadata.author,
+          },
+        });
+        await prisma.document.updateMany({
+          where: {
+            index: dir,
+            filename: metadata.filename,
+            title: null,
+          },
+          data: {
+            title: metadata.title,
+          },
+        });
+        //TODO expand with year
+      });
+    });
+  }),
 });
