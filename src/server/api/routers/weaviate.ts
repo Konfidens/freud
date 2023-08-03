@@ -158,7 +158,7 @@ export const weaviateRouter = createTRPCRouter({
    * - Create a new index per directory (unless it already exists)
    * - Add documents contained in directory to the index (unless already added)
    */
-  generateVectorStoreFromDisk: publicProcedure.mutation(async () => {
+  generateVectorStore: publicProcedure.mutation(async () => {
     console.debug("Called create vector store procedure");
 
     // Find existing classes
@@ -173,46 +173,34 @@ export const weaviateRouter = createTRPCRouter({
       .map((dirent) => dirent.name);
 
     for (const indexName of indexesFromDirectories) {
-      if (existingSchemas.includes(indexName)) {
-        console.debug(`-> Index ${indexName} already exists`);
-
-        // Load document
-        const docs = await loadDocuments(indexName);
-
-        // Return early if no new documents
-        if (docs?.length === 0) {
-          console.debug(`** Ending procedure for ${indexName}`);
-          continue;
-        }
-
-        try {
-          // Create vector store from documents
-          await createVectorStoreFromDocuments(indexName, docs, embeddings);
-        } catch (error) {
-          console.error(error);
-        }
-      } else {
+      if (!existingSchemas.includes(indexName)) {
+        // Create index
         console.debug(`** Creating index ${indexName}`);
         try {
-          // Create index
           await createIndex(indexName);
-
-          // Load document
-          const docs = await loadDocuments(indexName);
-
-          // Return early if no new documents
-          if (docs?.length === 0) {
-            continue;
-          }
-
-          // Add documents to vector store
-          await createVectorStoreFromDocuments(indexName, docs, embeddings);
-
-          console.debug(`** Index ${indexName} updated`);
         } catch (error) {
           console.error(`** Failed to create index: ${indexName}`);
           console.error(error);
         }
+      } else {
+        console.debug(`-> Index ${indexName} already exists`);
+      }
+
+      // Load documents
+      const docs = await loadDocuments(indexName);
+
+      // Return early if no new documents
+      if (docs?.length === 0) {
+        console.debug(`** Ending procedure for ${indexName}`);
+        continue;
+      }
+
+      try {
+        // Create vector store from documents
+        await createVectorStoreFromDocuments(indexName, docs, embeddings);
+        console.debug(`** Index ${indexName} updated`);
+      } catch (error) {
+        console.error(error);
       }
     }
   }),
