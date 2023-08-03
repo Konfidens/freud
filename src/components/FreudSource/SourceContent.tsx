@@ -2,20 +2,7 @@ import React from "react";
 import { ViewPDF } from "./ViewPDF";
 import { ViewEpub } from "./ViewEpub";
 import { env } from "~/env.mjs";
-
-type Prop = {
-  content: string;
-  category: string;
-  filename: string;
-  filetype: string;
-  location: {
-    chapter?: string;
-    href?: string;
-    pageNr?: number;
-    lineFrom: number;
-    lineTo: number;
-  };
-};
+import type { Source } from "~/interfaces/source";
 
 export const SourceContent = ({
   content,
@@ -23,7 +10,7 @@ export const SourceContent = ({
   filename,
   filetype,
   location,
-}: Prop) => {
+}: Source) => {
   return (
     <div className="bg-250 m-3 w-[100%] rounded-lg p-2">
       {content}
