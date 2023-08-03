@@ -13,7 +13,6 @@ datasource db {
 }
 
 // Datamodelling
-
 model Chat {
   id        String    @id @default(uuid())
   messages  Message[]
@@ -67,3 +66,20 @@ enum ThumbState {
   down
   none
 }
+
+model Document {
+  index    String
+  filename String
+  filetype FileType
+  author   String?
+  title    String?
+  url      String?
+
+  @@id([index, filename])
+}
+
+enum FileType {
+    epub
+    json
+    pdf
+  }
