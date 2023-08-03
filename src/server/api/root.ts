@@ -7,6 +7,7 @@ import { sourceRouter } from "./routers/sourceformat";
 import { followUpRouter } from "./routers/followup";
 import { prismaRouter } from "./routers/prisma";
 import { diagnosisRouter } from "./routers/diagnosis";
+import { updatemetadataRouter } from "./routers/updatemetadata";
 
 /**
  * This is the primary router for your server.
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   followup: followUpRouter,
   prisma: prismaRouter,
   diagnosis: diagnosisRouter,
+  updatemetadata: updatemetadataRouter
 });
 
 // export type definition of API

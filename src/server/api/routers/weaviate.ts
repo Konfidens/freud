@@ -2,7 +2,7 @@ import { readdirSync } from "fs";
 import type { Document } from "langchain/dist/document";
 import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 // import { EPubLoader } from "langchain/document_loaders/fs/epub";
-import { EPubLoader } from "~/server/document_loaders/epub";
+import { FileType, type Prisma } from "@prisma/client";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import { type OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -10,26 +10,12 @@ import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import path from "path";
 import { type WeaviateObject, type WeaviateSchema } from "weaviate-ts-client";
 import { z } from "zod";
-import { metadataDictionaryCBT } from "~/metadata/CBT";
-import { metadataDictionaryISTDP } from "~/metadata/ISTDP";
+import { prisma } from "~/../lib/prisma";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { type weaviateMetadataDictionary } from "~/types/weaviateMetadata";
+import { EPubLoader } from "~/server/document_loaders/epub";
 import { client } from "~/utils/weaviate/client";
 import { embeddings } from "~/utils/weaviate/embeddings";
 import { metadataKeys } from "~/utils/weaviate/getRetriever";
-
-// Combine metadata dictionaries into one dictionary
-const metadataDictionary: weaviateMetadataDictionary = Object.assign(
-  {},
-  metadataDictionaryISTDP,
-  metadataDictionaryCBT
-);
-
-// Define metadata for vetor store indexes
-const indexDescriptions: { [key: string]: string } = {
-  ISTDP: "Initial batch of ISTDP works for Freud",
-  CBT: "CBT documents to test framework comparisons in Freud",
-};
 
 // Root directory containing source documents
 const rootDirectoryPath = path.join(process.cwd(), "documents");
@@ -122,28 +108,29 @@ export const weaviateRouter = createTRPCRouter({
           // - There won't be duplicate filenames within an index
           // - It is probably better to store such metadata in a separate table than to duplicate it across all objects
 
-          const promises = res.data.Aggregate[input].map((item) => {
-            const filename = item.groupedBy.value;
+          const promises =
+            res.data.Aggregate[input]?.map((item) => {
+              const filename = item.groupedBy.value;
 
-            // Get first object with this filename
-            return client.graphql
-              .get()
-              .withClassName(input)
-              .withFields(`${metadataKeys.join(" ")}`)
-              .withWhere({
-                operator: "Equal",
-                path: ["filename"],
-                valueText: filename,
-              })
-              .withLimit(1)
-              .do()
-              .then((res) => {
-                return res.data.Get[input][0];
-              })
-              .catch((error) => {
-                console.error(error);
-              });
-          });
+              // Get first object with this filename
+              return client.graphql
+                .get()
+                .withClassName(input)
+                .withFields(`${metadataKeys.join(" ")}`)
+                .withWhere({
+                  operator: "Equal",
+                  path: ["filename"],
+                  valueText: filename,
+                })
+                .withLimit(1)
+                .do()
+                .then((res) => {
+                  return res.data.Get[input][0];
+                })
+                .catch((error) => {
+                  console.error(error);
+                });
+            }) ?? [];
 
           // Wait for all the promises to resolve and return the array of objects
           return Promise.all(promises);
@@ -158,7 +145,7 @@ export const weaviateRouter = createTRPCRouter({
    * - Create a new index per directory (unless it already exists)
    * - Add documents contained in directory to the index (unless already added)
    */
-  generateVectorStoreFromDisk: publicProcedure.mutation(async () => {
+  generateVectorStore: publicProcedure.mutation(async () => {
     console.debug("Called create vector store procedure");
 
     // Find existing classes
@@ -173,46 +160,34 @@ export const weaviateRouter = createTRPCRouter({
       .map((dirent) => dirent.name);
 
     for (const indexName of indexesFromDirectories) {
-      if (existingSchemas.includes(indexName)) {
-        console.debug(`-> Index ${indexName} already exists`);
-
-        // Load document
-        const docs = await loadDocuments(indexName);
-
-        // Return early if no new documents
-        if (docs?.length === 0) {
-          console.debug(`** Ending procedure for ${indexName}`);
-          continue;
-        }
-
-        try {
-          // Create vector store from documents
-          await createVectorStoreFromDocuments(indexName, docs, embeddings);
-        } catch (error) {
-          console.error(error);
-        }
-      } else {
+      if (!existingSchemas.includes(indexName)) {
+        // Create index
         console.debug(`** Creating index ${indexName}`);
         try {
-          // Create index
           await createIndex(indexName);
-
-          // Load document
-          const docs = await loadDocuments(indexName);
-
-          // Return early if no new documents
-          if (docs?.length === 0) {
-            continue;
-          }
-
-          // Add documents to vector store
-          await createVectorStoreFromDocuments(indexName, docs, embeddings);
-
-          console.debug(`** Index ${indexName} updated`);
         } catch (error) {
           console.error(`** Failed to create index: ${indexName}`);
           console.error(error);
         }
+      } else {
+        console.debug(`-> Index ${indexName} already exists`);
+      }
+
+      // Load documents
+      const docs = await loadDocuments(indexName);
+
+      // Return early if no new documents
+      if (docs?.length === 0) {
+        console.debug(`** Ending procedure for ${indexName}`);
+        continue;
+      }
+
+      try {
+        // Create vector store from documents
+        await createVectorStoreFromDocuments(indexName, docs, embeddings);
+        console.debug(`** Index ${indexName} updated`);
+      } catch (error) {
+        console.error(error);
       }
     }
   }),
@@ -231,31 +206,14 @@ export const weaviateRouter = createTRPCRouter({
 async function createIndex(indexName: string) {
   const weaviateClassObj = {
     class: indexName,
-    description: indexDescriptions[indexName],
+    description: "Index description",
     vectorIndexType: "hnsw",
     vectorizeClassName: true,
     properties: [
       {
-        name: "title",
-        dataType: ["string"],
-        description: "Book title",
-        vectorizePropertyName: true,
-        index: true,
-      },
-      {
-        name: "author",
-        dataType: ["string"],
-        description: "Author of book",
-      },
-      {
         name: "filename",
         dataType: ["string"],
-        description: "Name of source document",
-      },
-      {
-        name: "filetype",
-        dataType: ["string"],
-        description: "Type of source document",
+        description: "Filename of original source document",
       },
       {
         name: "category",
@@ -265,37 +223,7 @@ async function createIndex(indexName: string) {
       {
         name: "text",
         dataType: ["text"],
-        description: "Text content",
-      },
-      {
-        name: "pageNumber",
-        dataType: ["int"],
-        description: "Page number of text split (only PDF)",
-      },
-      {
-        name: "chapter",
-        dataType: ["string"],
-        description: "Chapter of text split (only Epub)",
-      },
-      {
-        name: "href",
-        dataType: ["string"],
-        description: "Hyperlink to the chapter a snippet is from (only Epub)",
-      },
-      {
-        name: "loc_lines_from",
-        dataType: ["int"],
-        description: "Text split beginning",
-      },
-      {
-        name: "loc_lines_to",
-        dataType: ["int"],
-        description: "Text split end",
-      },
-      {
-        name: "splitCount",
-        dataType: ["int"],
-        description: "Original number of splits",
+        description: "Text snippet",
       },
     ],
   };
@@ -330,8 +258,8 @@ async function getDocumentsFromSchema(schema: string) {
   return client.graphql
     .aggregate()
     .withClassName(schema)
-    .withGroupBy(["title"])
-    .withFields("groupedBy { value } meta {count} splitCount {minimum} ")
+    .withGroupBy(["filename"])
+    .withFields("groupedBy { value }")
     .do()
     .then(
       (res: {
@@ -339,22 +267,16 @@ async function getDocumentsFromSchema(schema: string) {
           Aggregate: {
             [classname: string]: Array<{
               groupedBy: { value: string };
-              meta: { count: number };
-              splitCount: { minimum: number };
             }>;
           };
         };
       }) => {
         const documents: {
-          title: string;
-          dbCount: number;
-          splitCount: number;
+          filename: string;
         }[] =
           res.data.Aggregate[schema]?.map((obj) => {
             return {
-              title: obj.groupedBy.value,
-              dbCount: obj.meta.count,
-              splitCount: obj.splitCount.minimum,
+              filename: obj.groupedBy.value,
             };
           }) ?? [];
 
@@ -371,6 +293,8 @@ async function loadDocuments(indexName: string) {
   // See https://js.langchain.com/docs/modules/indexes/document_loaders/examples/file_loaders/directory
   console.debug(`- Load documents (${indexName})`);
   const sourceDirectoryPath = path.join(rootDirectoryPath, indexName);
+  const pathSeparator = path.sep;
+
   const loader = new DirectoryLoader(path.join(sourceDirectoryPath), {
     ".pdf": (sourceDirectoryPath) =>
       new PDFLoader(sourceDirectoryPath, {
@@ -383,21 +307,8 @@ async function loadDocuments(indexName: string) {
   });
   const allDocs = await loader.load();
 
-  // Add custom metadata
-  console.debug(`- Clean document list and add metadata (${indexName})`);
-
-  const validKeys = [
-    "author",
-    "category",
-    "chapter",
-    "filename",
-    "filetype",
-    "href",
-    "splitCount",
-    "pageNumber",
-    "title",
-  ];
-  let splits: Array<Document<Record<string, any>>> = [];
+  const validKeys = ["category", "filename", "loc"];
+  const splits: Array<Document<Record<string, any>>> = [];
 
   // Define splitter
   const splitter = new RecursiveCharacterTextSplitter({
@@ -407,9 +318,11 @@ async function loadDocuments(indexName: string) {
 
   // Retrieve the titles of the existing documents in the index
   // Only documents with non-existing titles are added
-  const existingDocuments = await getDocumentsFromSchema(indexName);
+  const existingDocuments = await getDocumentsFromPrisma(indexName);
 
-  const pathSeparator = path.sep;
+  // Dictionary holding documents that later will be added to the Document table in Prisma
+  const insertManyDocumentData: Record<string, Prisma.DocumentCreateManyInput> =
+    {};
 
   await Promise.all(
     allDocs.map(async (document) => {
@@ -421,42 +334,12 @@ async function loadDocuments(indexName: string) {
         throw new Error("Missing or corrupted source metadata");
       }
 
-      const file: string =
+      const filename: string =
         document.metadata?.source?.split(pathSeparator).pop() ?? "";
 
-      const filename = file.split(".")[0] ?? "";
-      const filetype = file.split(".")[1] ?? "";
-
-      if (metadataDictionary[filename] === undefined) {
-        throw new Error(
-          `Missing metadata in dictionary for ${filename} in ${indexName}`
-        );
-      }
-
-      const title: string = metadataDictionary[filename]!.title;
-
-      if (
-        !existingDocuments ||
-        existingDocuments.some((doc) => doc.title === title)
-      ) {
-        // console.debug(`-> ${title} already exists in ${indexName}`);
-        return;
-      }
-
-      // console.debug(`-> Added ${filename} to ${indexName}`);
-
       // Add metadata to document
-      document.metadata.author = metadataDictionary[filename]!.author;
       document.metadata.category = indexName;
-      document.metadata.chapter =
-        (document.metadata?.chapter_title as string) ?? "";
-      document.metadata.filename = file;
-      document.metadata.filetype = filetype;
-      document.metadata.href =
-        (document.metadata?.chapter_href as string) ?? "";
-      document.metadata.title = title;
-      document.metadata.pageNumber =
-        (document.metadata.loc as { pageNumber?: number })?.pageNumber ?? 0;
+      document.metadata.filename = filename;
 
       // Remove remainding metadata
       Object.keys(document.metadata).forEach(
@@ -465,19 +348,34 @@ async function loadDocuments(indexName: string) {
 
       // Split document
       const split = await splitter.splitDocuments([document]);
+      splits.push(...split);
 
-      // Add splitCount metadata to each split
-      const splitCount = split.length;
-      split.forEach(
-        (textSplit) => (textSplit.metadata.splitCount = splitCount)
+      const documentExistsInPrisma = existingDocuments.some(
+        (doc) => doc.filename === filename
       );
 
-      // Push to cleaned document array
-      splits = [...splits, ...split];
+      if (!documentExistsInPrisma) {
+        try {
+          const filetype = getFileType(filename);
+          insertManyDocumentData[filename] = {
+            index: indexName,
+            filename,
+            filetype,
+          };
+        } catch (error) {
+          console.error(error);
+        }
+      }
     })
   );
 
-  // Return early if there are no new documents
+  // Insert all new documents in the "Document" Prisma table
+  await prisma.document.createMany({
+    data: Object.values(insertManyDocumentData),
+    skipDuplicates: true,
+  });
+
+  // Console debug to inform that there are no new documents
   if (splits.length === 0) {
     console.debug("-> No new documents in " + indexName);
   }
@@ -489,10 +387,10 @@ async function isObjectInIndex(indexName: string, title: string) {
   return await client.graphql
     .get()
     .withClassName(indexName)
-    .withFields("title")
+    .withFields("filename")
     .withWhere({
       operator: "Equal",
-      path: ["title"],
+      path: ["filename"],
       valueText: title,
     })
     .withLimit(1)
@@ -530,4 +428,33 @@ async function createVectorStoreFromDocuments(
       console.debug(`- Vector store created (${indexName})`);
     })
     .catch((error: Error) => console.error(error));
+}
+
+function getFileType(filename: string) {
+  const fileExtension = filename.split(".").pop();
+
+  if (fileExtension === undefined) {
+    throw new Error(`File extension undefined for file ${filename}`);
+  }
+
+  if (fileExtension === "epub") {
+    return FileType.epub;
+  } else if (fileExtension === "json") {
+    return FileType.json;
+  } else if (fileExtension === "pdf") {
+    return FileType.pdf;
+  } else {
+    throw new Error(`Unknown filetype ${fileExtension} from file ${filename}`);
+  }
+}
+
+async function getDocumentsFromPrisma(index: string) {
+  return await prisma.document.findMany({
+    where: {
+      index,
+    },
+    select: {
+      filename: true,
+    },
+  });
 }

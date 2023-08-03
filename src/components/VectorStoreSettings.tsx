@@ -4,7 +4,7 @@ import { Button } from "./ui/button/Button";
 
 type Props = {
   vectorStoreSchemas: any;
-}
+};
 
 export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
   const [showObjectsInDatabase, setShowObjectsInDatabase] = React.useState<{
@@ -14,15 +14,14 @@ export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
     [key: string]: { title: string; dbCount: number; splitCount: number }[];
   }>({});
 
-  const vectorStoreCreation =
-    api.weaviate.generateVectorStoreFromDisk.useMutation({
-      onError: (error) => {
-        console.error(error);
-      },
-      onSuccess: () => {
-        console.info("Vector store create request submitted");
-      },
-    });
+  const vectorStoreCreation = api.weaviate.generateVectorStore.useMutation({
+    onError: (error) => {
+      console.error(error);
+    },
+    onSuccess: () => {
+      console.info("Vector store create request submitted");
+    },
+  });
 
   const vectorStoreClassDeletion = api.weaviate.deleteSchema.useMutation();
 
@@ -67,9 +66,22 @@ export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
     });
   }
 
+  const updatemetadata = api.updatemetadata.updatemetadata.useMutation({
+    onSuccess: (output) => {
+      console.log(output)
+    }
+  })
+
   return (
     <>
       <div className="p-10">
+        <Button
+          size={"large"}
+          color={"green"}
+          onClick={() => updatemetadata.mutate()}
+        >
+          Oppdater metadata i vektordatabase
+        </Button>
         {vectorStoreSchemas.isLoading ||
           !vectorStoreSchemas.data ||
           !vectorStoreSchemas.data?.classes
