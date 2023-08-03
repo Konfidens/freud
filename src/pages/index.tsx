@@ -88,7 +88,7 @@ export default function Home() {
         {/* get content in center at start */}
         <div />
         <div />
-        <Header chatStarted={messages.length > 0} />
+        <Header chatStarted={messages.length > 0} diagnosismode={diagnosisMode} />
         <Chat
           messages={messages}
           setMessages={setMessages}
