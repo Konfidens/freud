@@ -11,7 +11,7 @@ export const Source = z.object({
   }),
   content: z.string(),
   filename: z.string(),
-  filetype: z.nativeEnum(FileType),
+  filetype: z.nativeEnum(FileType).optional(),
   category: z.string(),
   score: z.number(),
 });
