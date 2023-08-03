@@ -5,19 +5,7 @@ import { embeddings } from "./embeddings";
 
 const indexes: string[] = ["CBT", "ISTDP"];
 
-export const metadataKeys: string[] = [
-  "author",
-  "category",
-  "chapter",
-  "filename",
-  "filetype",
-  "href",
-  "loc_lines_from",
-  "loc_lines_to",
-  "splitCount",
-  "pageNumber",
-  "title",
-];
+export const metadataKeys: string[] = ["category", "filename"];
 
 export function getRetrieverFromIndex(indexName: string) {
   return WeaviateStore.fromExistingIndex(embeddings, {

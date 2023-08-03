@@ -4,7 +4,7 @@ import { Button } from "./ui/button/Button";
 
 type Props = {
   vectorStoreSchemas: any;
-}
+};
 
 export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
   const [showObjectsInDatabase, setShowObjectsInDatabase] = React.useState<{
@@ -14,15 +14,14 @@ export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
     [key: string]: { title: string; dbCount: number; splitCount: number }[];
   }>({});
 
-  const vectorStoreCreation =
-    api.weaviate.generateVectorStoreFromDisk.useMutation({
-      onError: (error) => {
-        console.error(error);
-      },
-      onSuccess: () => {
-        console.info("Vector store create request submitted");
-      },
-    });
+  const vectorStoreCreation = api.weaviate.generateVectorStore.useMutation({
+    onError: (error) => {
+      console.error(error);
+    },
+    onSuccess: () => {
+      console.info("Vector store create request submitted");
+    },
+  });
 
   const vectorStoreClassDeletion = api.weaviate.deleteSchema.useMutation();
 
@@ -71,117 +70,117 @@ export const VectorStoreSettings = ({ vectorStoreSchemas }: Props) => {
     <>
       <div className="p-10">
         {vectorStoreSchemas.isLoading ||
-          !vectorStoreSchemas.data ||
-          !vectorStoreSchemas.data?.classes
+        !vectorStoreSchemas.data ||
+        !vectorStoreSchemas.data?.classes
           ? "..."
           : vectorStoreSchemas.data.classes.map((data: any, tidx: number) => {
-            if (data.class === undefined || typeof data.class !== "string") {
-              return "";
-            } else {
-              addObjectsVisibilityKey(data.class);
-              return (
-                <div className="pb-10" key={"schema-" + tidx.toString()}>
-                  <h2 className="font-extrabold">{data.class}</h2>
-                  Beskrivelse: {data.description}
-                  <br />
-                  Indekseringsmetode: {data.vectorIndexType}
-                  <br />
-                  Distanse:{" "}
-                  {(data.vectorIndexConfig?.distance as string) ??
-                    "undefined"}
-                  <h3 className="pt-5 font-bold">Metadata</h3>
-                  <table className="border">
-                    <tbody>
-                      <tr className="border">
-                        <th
-                          className="border"
-                          key={"name-" + tidx.toString()}
-                        >
-                          Navn
-                        </th>
-                        <th className="border">Datatype</th>
-                        <th className="border">Beskrivelse</th>
-                        <th className="border">Filtrerbar</th>
-                        <th className="border">Søkbar</th>
-                      </tr>
-                      {data.properties?.map((property: any, ridx: number) => {
-                        return (
-                          <tr
-                            key={
-                              "schema" +
-                              tidx.toString() +
-                              "-metadata-" +
-                              ridx.toString()
-                            }
+              if (data.class === undefined || typeof data.class !== "string") {
+                return "";
+              } else {
+                addObjectsVisibilityKey(data.class);
+                return (
+                  <div className="pb-10" key={"schema-" + tidx.toString()}>
+                    <h2 className="font-extrabold">{data.class}</h2>
+                    Beskrivelse: {data.description}
+                    <br />
+                    Indekseringsmetode: {data.vectorIndexType}
+                    <br />
+                    Distanse:{" "}
+                    {(data.vectorIndexConfig?.distance as string) ??
+                      "undefined"}
+                    <h3 className="pt-5 font-bold">Metadata</h3>
+                    <table className="border">
+                      <tbody>
+                        <tr className="border">
+                          <th
+                            className="border"
+                            key={"name-" + tidx.toString()}
                           >
-                            <td className="border">{property.name}</td>
-                            <td className="border">{property.dataType}</td>
-                            <td className="border">{property.description}</td>
-                            <td className="border">
-                              {property.indexFilterable?.valueOf().toString()}
-                            </td>
-                            <td className="border">
-                              {property.indexSearchable?.valueOf().toString()}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <br />
-                  <Button
-                    size={"small"}
-                    onClick={() => {
-                      if (!showObjectsInDatabase[data.class!]) {
-                        getObjectsFromClass(data.class!);
-                      }
-                      setShowObjectsInDatabase({
-                        ...showObjectsInDatabase,
-                        [data.class!]: !showObjectsInDatabase[data.class!],
-                      });
-                    }}
-                  >
-                    Vis titler
-                  </Button>
-                  <div className="p-5">
-                    {vectorStoreListObjects.isLoading ||
+                            Navn
+                          </th>
+                          <th className="border">Datatype</th>
+                          <th className="border">Beskrivelse</th>
+                          <th className="border">Filtrerbar</th>
+                          <th className="border">Søkbar</th>
+                        </tr>
+                        {data.properties?.map((property: any, ridx: number) => {
+                          return (
+                            <tr
+                              key={
+                                "schema" +
+                                tidx.toString() +
+                                "-metadata-" +
+                                ridx.toString()
+                              }
+                            >
+                              <td className="border">{property.name}</td>
+                              <td className="border">{property.dataType}</td>
+                              <td className="border">{property.description}</td>
+                              <td className="border">
+                                {property.indexFilterable?.valueOf().toString()}
+                              </td>
+                              <td className="border">
+                                {property.indexSearchable?.valueOf().toString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <br />
+                    <Button
+                      size={"small"}
+                      onClick={() => {
+                        if (!showObjectsInDatabase[data.class!]) {
+                          getObjectsFromClass(data.class!);
+                        }
+                        setShowObjectsInDatabase({
+                          ...showObjectsInDatabase,
+                          [data.class!]: !showObjectsInDatabase[data.class!],
+                        });
+                      }}
+                    >
+                      Vis titler
+                    </Button>
+                    <div className="p-5">
+                      {vectorStoreListObjects.isLoading ||
                       !weaviateClassObjects[data.class] ||
                       !showObjectsInDatabase[data.class] ? (
-                      ""
-                    ) : (
-                      <div className={data.class + "-objects"}>
-                        {weaviateClassObjects[data.class]?.length === 0 ? (
-                          "Ingen dokumenter"
-                        ) : (
-                          <ul className="list-disc">
-                            {weaviateClassObjects[data.class]?.map(
-                              (obj, idx: number) => {
-                                return (
-                                  <li key={idx}>
-                                    {obj.title} ({obj.splitCount}/
-                                    {obj.dbCount})
-                                  </li>
-                                );
-                              }
-                            )}
-                          </ul>
-                        )}
-                      </div>
-                    )}
+                        ""
+                      ) : (
+                        <div className={data.class + "-objects"}>
+                          {weaviateClassObjects[data.class]?.length === 0 ? (
+                            "Ingen dokumenter"
+                          ) : (
+                            <ul className="list-disc">
+                              {weaviateClassObjects[data.class]?.map(
+                                (obj, idx: number) => {
+                                  return (
+                                    <li key={idx}>
+                                      {obj.title} ({obj.splitCount}/
+                                      {obj.dbCount})
+                                    </li>
+                                  );
+                                }
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      color={"red"}
+                      size={"small"}
+                      loading={vectorStoreClassDeletion.isLoading}
+                      disabled={vectorStoreClassDeletion.isLoading}
+                      onClick={() => deleteVectorClass(data.class!)}
+                    >
+                      Slett {data.class}
+                    </Button>
                   </div>
-                  <Button
-                    color={"red"}
-                    size={"small"}
-                    loading={vectorStoreClassDeletion.isLoading}
-                    disabled={vectorStoreClassDeletion.isLoading}
-                    onClick={() => deleteVectorClass(data.class!)}
-                  >
-                    Slett {data.class}
-                  </Button>
-                </div>
-              );
-            }
-          })}
+                );
+              }
+            })}
         <div className="pt-5">
           <Button
             size={"small"}
