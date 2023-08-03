@@ -5,10 +5,10 @@ import { Icon } from "../ui/icon/Icon";
 import { type Document } from "@prisma/client";
 
 type Props = {
-  classname: string;
+  streng: string;
 };
 
-export const IndexObjectList = ({ classname }: Props) => {
+export const IndexObjectList = ({ streng }: Props) => {
   const [documents, setDocuments] = React.useState<Document[]>([]);
 
   const getObjects = api.updatemetadata.getAllRowsWithIndex.useMutation({
@@ -24,7 +24,7 @@ export const IndexObjectList = ({ classname }: Props) => {
   });
 
   React.useEffect(() => {
-    getObjects.mutate(classname);
+    getObjects.mutate(streng);
   }, []);
 
   return (
