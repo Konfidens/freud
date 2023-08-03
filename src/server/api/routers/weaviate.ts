@@ -10,26 +10,10 @@ import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import path from "path";
 import { type WeaviateObject, type WeaviateSchema } from "weaviate-ts-client";
 import { z } from "zod";
-import { metadataDictionaryCBT } from "~/metadata/CBT";
-import { metadataDictionaryISTDP } from "~/metadata/ISTDP";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { type weaviateMetadataDictionary } from "~/types/weaviateMetadata";
 import { client } from "~/utils/weaviate/client";
 import { embeddings } from "~/utils/weaviate/embeddings";
 import { metadataKeys } from "~/utils/weaviate/getRetriever";
-
-// Combine metadata dictionaries into one dictionary
-const metadataDictionary: weaviateMetadataDictionary = Object.assign(
-  {},
-  metadataDictionaryISTDP,
-  metadataDictionaryCBT
-);
-
-// Define metadata for vetor store indexes
-const indexDescriptions: { [key: string]: string } = {
-  ISTDP: "Initial batch of ISTDP works for Freud",
-  CBT: "CBT documents to test framework comparisons in Freud",
-};
 
 // Root directory containing source documents
 const rootDirectoryPath = path.join(process.cwd(), "documents");
@@ -219,31 +203,14 @@ export const weaviateRouter = createTRPCRouter({
 async function createIndex(indexName: string) {
   const weaviateClassObj = {
     class: indexName,
-    description: indexDescriptions[indexName],
+    description: "Index description",
     vectorIndexType: "hnsw",
     vectorizeClassName: true,
     properties: [
       {
-        name: "title",
-        dataType: ["string"],
-        description: "Book title",
-        vectorizePropertyName: true,
-        index: true,
-      },
-      {
-        name: "author",
-        dataType: ["string"],
-        description: "Author of book",
-      },
-      {
         name: "filename",
         dataType: ["string"],
-        description: "Name of source document",
-      },
-      {
-        name: "filetype",
-        dataType: ["string"],
-        description: "Type of source document",
+        description: "Filename of original source document",
       },
       {
         name: "category",
@@ -253,37 +220,7 @@ async function createIndex(indexName: string) {
       {
         name: "text",
         dataType: ["text"],
-        description: "Text content",
-      },
-      {
-        name: "pageNumber",
-        dataType: ["int"],
-        description: "Page number of text split (only PDF)",
-      },
-      {
-        name: "chapter",
-        dataType: ["string"],
-        description: "Chapter of text split (only Epub)",
-      },
-      {
-        name: "href",
-        dataType: ["string"],
-        description: "Hyperlink to the chapter a snippet is from (only Epub)",
-      },
-      {
-        name: "loc_lines_from",
-        dataType: ["int"],
-        description: "Text split beginning",
-      },
-      {
-        name: "loc_lines_to",
-        dataType: ["int"],
-        description: "Text split end",
-      },
-      {
-        name: "splitCount",
-        dataType: ["int"],
-        description: "Original number of splits",
+        description: "Text snippet",
       },
     ],
   };
@@ -318,8 +255,8 @@ async function getDocumentsFromSchema(schema: string) {
   return client.graphql
     .aggregate()
     .withClassName(schema)
-    .withGroupBy(["title"])
-    .withFields("groupedBy { value } meta {count} splitCount {minimum} ")
+    .withGroupBy(["filename"])
+    .withFields("groupedBy { value }")
     .do()
     .then(
       (res: {
@@ -327,22 +264,16 @@ async function getDocumentsFromSchema(schema: string) {
           Aggregate: {
             [classname: string]: Array<{
               groupedBy: { value: string };
-              meta: { count: number };
-              splitCount: { minimum: number };
             }>;
           };
         };
       }) => {
         const documents: {
-          title: string;
-          dbCount: number;
-          splitCount: number;
+          filename: string;
         }[] =
           res.data.Aggregate[schema]?.map((obj) => {
             return {
-              title: obj.groupedBy.value,
-              dbCount: obj.meta.count,
-              splitCount: obj.splitCount.minimum,
+              filename: obj.groupedBy.value,
             };
           }) ?? [];
 
@@ -374,17 +305,7 @@ async function loadDocuments(indexName: string) {
   // Add custom metadata
   console.debug(`- Clean document list and add metadata (${indexName})`);
 
-  const validKeys = [
-    "author",
-    "category",
-    "chapter",
-    "filename",
-    "filetype",
-    "href",
-    "splitCount",
-    "pageNumber",
-    "title",
-  ];
+  const validKeys = ["category", "filename", "loc"];
   let splits: Array<Document<Record<string, any>>> = [];
 
   // Define splitter
@@ -453,14 +374,6 @@ async function loadDocuments(indexName: string) {
 
       // Split document
       const split = await splitter.splitDocuments([document]);
-
-      // Add splitCount metadata to each split
-      const splitCount = split.length;
-      split.forEach(
-        (textSplit) => (textSplit.metadata.splitCount = splitCount)
-      );
-
-      // Push to cleaned document array
       splits = [...splits, ...split];
     })
   );
@@ -477,10 +390,10 @@ async function isObjectInIndex(indexName: string, title: string) {
   return await client.graphql
     .get()
     .withClassName(indexName)
-    .withFields("title")
+    .withFields("filename")
     .withWhere({
       operator: "Equal",
-      path: ["title"],
+      path: ["filename"],
       valueText: title,
     })
     .withLimit(1)
