@@ -2,22 +2,22 @@ import React from "react";
 import { Button } from "../ui/button/Button";
 import { InputField } from "../ui/inputField/InputField";
 import { api } from "~/utils/api";
-import { Document } from "@prisma/client";
+import { type Document } from "@prisma/client";
 
 type Props={
   document: Document,
 }
-export const IndexdocumentItem = ({ document } : Props) => {
+export const IndexObjectItem = ({ document } : Props) => {
   const [edit, setEdit] = React.useState(false);
-  const [title, setTitle] = React.useState(document.title);
-  const [author, setAuthor] = React.useState(document.author);
-  const [url, setUrl] = React.useState(document.url);
+  const [title, setTitle] = React.useState(document?.title);
+  const [author, setAuthor] = React.useState(document?.author);
+  const [url, setUrl] = React.useState(document?.url);
 
   const updateRow = api.updatemetadata.updateSingleRow.useMutation({
     onError: (error) => {
       console.error(error);
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       console.log("Success!");
     },
   });
@@ -26,9 +26,9 @@ export const IndexdocumentItem = ({ document } : Props) => {
     updateRow.mutate({ 
       index: document.index, 
       filename: document.filename,
-      title: title,
-      author: author,
-      url: url,
+      title: title ?? undefined,
+      author: author ?? undefined,
+      url: url ?? undefined,
     });
   }
 
@@ -51,10 +51,11 @@ export const IndexdocumentItem = ({ document } : Props) => {
         {edit && (
           <>
             <InputField
+              id="Title"
               disabled={updateRow.isLoading}
               label="Title"
-              value={title as string}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              value={title ?? "<undefined>"}
+              onChange={(e) => {
                 setTitle(e.target.value);
               }}
               className="mb-1 mr-1 mt-1"
@@ -62,10 +63,11 @@ export const IndexdocumentItem = ({ document } : Props) => {
               placeholder="Title"
             />
             <InputField
+              id="Author"
               disabled={updateRow.isLoading}
               label="Author"
-              value={author as string}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              value={author ?? "<undefined>"}
+              onChange={(e) => {
                 setAuthor(e.target.value);
               }}
               className="mb-1 mr-1 mt-1"
@@ -73,10 +75,11 @@ export const IndexdocumentItem = ({ document } : Props) => {
               placeholder="Author"
             />
             <InputField
+              id="URL"
               disabled={updateRow.isLoading}
               label="URL"
-              value={url}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              value={url ?? "<undefined>"}
+              onChange={(e) => {
                 setUrl(e.target.value);
               }}
               className="mb-1 mr-1 mt-1"

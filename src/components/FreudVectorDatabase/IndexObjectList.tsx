@@ -1,22 +1,25 @@
 import React from "react";
-import { type WeaviateObjectsList } from "weaviate-ts-client";
 import { api } from "~/utils/api";
 import { IndexObjectItem } from "./IndexObjectItem";
 import { Icon } from "../ui/icon/Icon";
+import { type Document } from "@prisma/client";
 
 type Props = {
   classname: string;
 };
 
 export const IndexObjectList = ({ classname }: Props) => {
-  const [objects, setObjects] = React.useState([]);
+  const [documents, setDocuments] = React.useState<Document[]>([]);
 
   const getObjects = api.updatemetadata.getAllRowsWithIndex.useMutation({
     onError: (error) => {
       console.error(error);
     },
     onSuccess: (data) => {
-      setObjects(data);
+      if (!data) {
+        throw new Error("Data is not defined");
+      }
+      setDocuments(data);
     },
   });
 
@@ -27,8 +30,8 @@ export const IndexObjectList = ({ classname }: Props) => {
   return (
     <div>
       {getObjects.isLoading && <Icon name="spinner" />}
-      {objects.map((object, idx) => {
-        return <IndexObjectItem key={idx} object={object} />;
+      {documents.map((document, idx) => {
+        return <IndexObjectItem key={idx} document={document} />;
       })}
     </div>
   );
