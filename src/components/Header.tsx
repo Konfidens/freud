@@ -39,8 +39,7 @@ const Header = ({ chatStarted }: Prop) => {
         </li>
         <li>Foreløpig er den kun tilpasset å kunne gi svar på engelsk.</li>
         <li>
-          Trykk på mail-ikonet for å gi en tilbakemelding på hva som kan
-          forbedres.
+          Gjerne gi tilbakemelding
         </li>
       </ul>
     </div>

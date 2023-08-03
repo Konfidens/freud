@@ -33,6 +33,7 @@
     "graphql": "^16.7.1",
     "hnswlib-node": "^1.4.2",
     "html-to-text": "^9.0.5",
+    "jsdom": "^22.1.0",
     "langchain": "^0.0.98",
     "next": "^13.4.2",
     "openai": "^3.3.0",
@@ -50,6 +51,7 @@
   "devDependencies": {
     "@types/eslint": "^8.37.0",
     "@types/html-to-text": "^9.0.1",
+    "@types/jsdom": "^21.1.1",
     "@types/node": "^18.16.0",
     "@types/prettier": "^2.7.2",
     "@types/react": "^18.2.6",

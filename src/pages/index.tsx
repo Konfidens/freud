@@ -5,6 +5,7 @@ import Header from "~/components/Header";
 import SelectCategories from "~/components/SelectCategories";
 import { SidebarFreud } from "~/components/SidebarFreud";
 import { VectorStoreSettings } from "~/components/VectorStoreSettings";
+import { Button } from "~/components/ui/button/Button";
 import { env } from "~/env.mjs";
 import { type Message } from "~/interfaces/message";
 import type { Categories } from "~/types/categories";
@@ -14,6 +15,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [categories, setCategories] = useState<Categories>({});
+  const [diagnosisMode, setDiagnosisMode] = useState<boolean>(false);
 
   const fetchedCategories = api.weaviate.listSchemas.useMutation({
     onSuccess: (data) => {
@@ -71,6 +73,13 @@ export default function Home() {
               categories={categories}
               setCategories={setCategories}
             />
+            <Button
+              color={diagnosisMode ? "green" : "white"}
+              onClick={() => setDiagnosisMode(!diagnosisMode)}
+              className="ml-4"
+            >
+              Diagnosis mode
+            </Button>
             {env.NEXT_PUBLIC_NODE_ENV == "development" && (
               <VectorStoreSettings vectorStoreSchemas={fetchedCategories} />
             )}
@@ -84,6 +93,7 @@ export default function Home() {
           messages={messages}
           setMessages={setMessages}
           categories={categories}
+          diagnosisMode={diagnosisMode}
         />
       </main>
     </>

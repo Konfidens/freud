@@ -12,6 +12,7 @@ type Props = {
   setEmail: React.Dispatch<React.SetStateAction<string>>;
   setComment: React.Dispatch<React.SetStateAction<string>>;
   handleSubmit: () => void;
+  closeForms: () => void;
 };
 
 export const FeedbackForm = ({
@@ -22,6 +23,7 @@ export const FeedbackForm = ({
   setEmail,
   setComment,
   handleSubmit,
+  closeForms,
 }: Props) => {
   const labelStyle = { fontSize: "var(--fontSizes-xxs)", fontWeight: "bold" };
   const inputStyle = {
@@ -38,7 +40,6 @@ export const FeedbackForm = ({
         <p className="mb-1">Både din kommentar og samtale vil bli sendt.</p>
         <TextArea
           id="feedback"
-          // className="h-[6rem]"
           style={inputStyle}
           onChange={(e) => setComment(e.target.value)}
           value={comment}
@@ -66,6 +67,7 @@ export const FeedbackForm = ({
             if (e.key === "Enter") {
               e.preventDefault();
               handleSubmit();
+              closeForms();
             }
           }}
         />
@@ -81,6 +83,7 @@ export const FeedbackForm = ({
           onClick={(e) => {
             e.preventDefault();
             handleSubmit();
+            closeForms();
           }}
         >
           Send

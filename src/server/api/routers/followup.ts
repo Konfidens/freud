@@ -1,10 +1,29 @@
 import { LLMChain, OpenAI, PromptTemplate } from "langchain";
+import { ChatOpenAI } from "langchain/chat_models/openai";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { calcPrice, Usage } from "~/utils/usagecalc";
 
-export const model = new OpenAI({
+
+
+let usage: Usage = {
+  prompt_tokens: 0,
+  completion_tokens: 0,
+  total_tokens: 0
+}
+
+export const model = new ChatOpenAI({
   modelName: "gpt-3.5-turbo",
-  verbose: true,
+  callbacks: [
+    {
+      handleLLMEnd: (output) => {
+        const { completionTokens, promptTokens, totalTokens } = output.llmOutput?.tokenUsage;
+        usage.prompt_tokens += completionTokens ?? 0;
+        usage.total_tokens += promptTokens ?? 0;
+        usage.completion_tokens += totalTokens ?? 0;
+      },
+    },
+  ],
 });
 
 function textToFollowUps(str: string | undefined): string[] {
@@ -50,7 +69,7 @@ const chain_followUp = new LLMChain({
 });
 
 export async function makeFollowUpQuestionsForText(text: string) {
-  const llm_response = await chain_followUp.call({ previous_answer: text});
+  const llm_response = await chain_followUp.call({ previous_answer: text });
   let generated_followup_questions: string[] = textToFollowUps(llm_response.text as string);
 
   let letterCount = 0;
@@ -64,11 +83,13 @@ export async function makeFollowUpQuestionsForText(text: string) {
       "What do I do if my patient is very silent?",
     ];
   }
+
+  console.log("Followups: " + calcPrice(usage).toPrecision(3) + "$")
   return generated_followup_questions;
 }
 
 export const followUpRouter = createTRPCRouter({
-  
+
   makeFollowUps: publicProcedure
 
     // Input validation
