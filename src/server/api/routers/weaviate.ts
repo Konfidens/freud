@@ -2,7 +2,7 @@ import { readdirSync } from "fs";
 import type { Document } from "langchain/dist/document";
 import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 // import { EPubLoader } from "langchain/document_loaders/fs/epub";
-import { EPubLoader } from "~/server/document_loaders/epub";
+import { FileType } from "@prisma/client";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import { type OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -10,7 +10,9 @@ import { WeaviateStore } from "langchain/vectorstores/weaviate";
 import path from "path";
 import { type WeaviateObject, type WeaviateSchema } from "weaviate-ts-client";
 import { z } from "zod";
+import { prisma } from "~/../lib/prisma";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { EPubLoader } from "~/server/document_loaders/epub";
 import { client } from "~/utils/weaviate/client";
 import { embeddings } from "~/utils/weaviate/embeddings";
 import { metadataKeys } from "~/utils/weaviate/getRetriever";
@@ -106,28 +108,29 @@ export const weaviateRouter = createTRPCRouter({
           // - There won't be duplicate filenames within an index
           // - It is probably better to store such metadata in a separate table than to duplicate it across all objects
 
-          const promises = res.data.Aggregate[input].map((item) => {
-            const filename = item.groupedBy.value;
+          const promises =
+            res.data.Aggregate[input]?.map((item) => {
+              const filename = item.groupedBy.value;
 
-            // Get first object with this filename
-            return client.graphql
-              .get()
-              .withClassName(input)
-              .withFields(`${metadataKeys.join(" ")}`)
-              .withWhere({
-                operator: "Equal",
-                path: ["filename"],
-                valueText: filename,
-              })
-              .withLimit(1)
-              .do()
-              .then((res) => {
-                return res.data.Get[input][0];
-              })
-              .catch((error) => {
-                console.error(error);
-              });
-          });
+              // Get first object with this filename
+              return client.graphql
+                .get()
+                .withClassName(input)
+                .withFields(`${metadataKeys.join(" ")}`)
+                .withWhere({
+                  operator: "Equal",
+                  path: ["filename"],
+                  valueText: filename,
+                })
+                .withLimit(1)
+                .do()
+                .then((res) => {
+                  return res.data.Get[input][0];
+                })
+                .catch((error) => {
+                  console.error(error);
+                });
+            }) ?? [];
 
           // Wait for all the promises to resolve and return the array of objects
           return Promise.all(promises);
@@ -316,7 +319,7 @@ async function loadDocuments(indexName: string) {
 
   // Retrieve the titles of the existing documents in the index
   // Only documents with non-existing titles are added
-  const existingDocuments = await getDocumentsFromSchema(indexName);
+  const existingDocuments = await getDocumentsFromPrisma(indexName);
 
   const pathSeparator = path.sep;
 
@@ -330,23 +333,12 @@ async function loadDocuments(indexName: string) {
         throw new Error("Missing or corrupted source metadata");
       }
 
-      const file: string =
+      const filename: string =
         document.metadata?.source?.split(pathSeparator).pop() ?? "";
-
-      const filename = file.split(".")[0] ?? "";
-      const filetype = file.split(".")[1] ?? "";
-
-      if (metadataDictionary[filename] === undefined) {
-        throw new Error(
-          `Missing metadata in dictionary for ${filename} in ${indexName}`
-        );
-      }
-
-      const title: string = metadataDictionary[filename]!.title;
 
       if (
         !existingDocuments ||
-        existingDocuments.some((doc) => doc.title === title)
+        existingDocuments.some((doc) => doc.filename === filename)
       ) {
         // console.debug(`-> ${title} already exists in ${indexName}`);
         return;
@@ -355,17 +347,8 @@ async function loadDocuments(indexName: string) {
       // console.debug(`-> Added ${filename} to ${indexName}`);
 
       // Add metadata to document
-      document.metadata.author = metadataDictionary[filename]!.author;
       document.metadata.category = indexName;
-      document.metadata.chapter =
-        (document.metadata?.chapter_title as string) ?? "";
-      document.metadata.filename = file;
-      document.metadata.filetype = filetype;
-      document.metadata.href =
-        (document.metadata?.chapter_href as string) ?? "";
-      document.metadata.title = title;
-      document.metadata.pageNumber =
-        (document.metadata.loc as { pageNumber?: number })?.pageNumber ?? 0;
+      document.metadata.filename = filename;
 
       // Remove remainding metadata
       Object.keys(document.metadata).forEach(
@@ -375,6 +358,12 @@ async function loadDocuments(indexName: string) {
       // Split document
       const split = await splitter.splitDocuments([document]);
       splits = [...splits, ...split];
+      try {
+        existingDocuments.push(await addToPrisma(indexName, filename));
+      } catch (error) {
+        console.error(error);
+        return;
+      }
     })
   );
 
@@ -431,4 +420,42 @@ async function createVectorStoreFromDocuments(
       console.debug(`- Vector store created (${indexName})`);
     })
     .catch((error: Error) => console.error(error));
+}
+
+async function addToPrisma(index: string, filename: string) {
+  const filetype = getFileType(filename);
+
+  return await prisma.document.create({
+    data: {
+      index,
+      filename,
+      filetype,
+    },
+  });
+}
+
+function getFileType(filename: string) {
+  const fileExtension = filename.split(".").pop();
+
+  if (fileExtension === undefined) {
+    throw new Error(`File extension undefined for file ${filename}`);
+  }
+
+  if (fileExtension === "epub") {
+    return FileType.epub;
+  } else if (fileExtension === "json") {
+    return FileType.json;
+  } else if (fileExtension === "pdf") {
+    return FileType.pdf;
+  } else {
+    throw new Error(`Unknown filetype ${fileExtension} from file ${filename}`);
+  }
+}
+
+async function getDocumentsFromPrisma(index: string) {
+  return await prisma.document.findMany({
+    where: {
+      index,
+    },
+  });
 }
