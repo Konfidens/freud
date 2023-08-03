@@ -11,7 +11,7 @@ type Props = {
 export const IndexObjectList = ({ classname }: Props) => {
   const [objects, setObjects] = React.useState([]);
 
-  const getObjects = api.weaviate.listObjects2.useMutation({
+  const getObjects = api.updatemetadata.getAllRowsWithIndex.useMutation({
     onError: (error) => {
       console.error(error);
     },

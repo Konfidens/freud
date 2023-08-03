@@ -97,4 +97,43 @@ export const updatemetadataRouter = createTRPCRouter({
       });
     });
   }),
+
+  updateSingleRow: publicProcedure
+
+    .input(
+      z.object({
+        index: z.string(),
+        filename: z.string(),
+        title: z.optional(z.string()),
+        author: z.optional(z.string()),
+        url: z.optional(z.string()),
+      })
+    )
+
+    .mutation(async ({ input }) => {
+      await prisma.document.update({
+        where: {
+          index_filename: { index: input.index, filename: input.filename },
+        },
+        data: {
+          title: input.title,
+          author: input.author,
+          url: input.url,
+        },
+      });
+    }),
+
+  getAllRowsWithIndex: publicProcedure
+
+    .input(z.string())
+
+    .mutation(async ({ input }) => {
+      const results = await prisma.document.findMany({
+        where: {
+          index: input,
+        },
+      });
+
+      return results;
+    }),
 });
