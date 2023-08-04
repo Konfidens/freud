@@ -46,8 +46,8 @@ const SourceItem = ({
         }
       >
         <span>[{id + 1}] </span>
-        <span className="font-bold">{source.title}</span> av{" "}
-        <span className="font-normal">{source.author}</span>
+        {/* <span className="font-bold">{source.title}</span> av{" "}
+        <span className="font-normal">{source.author}</span> */}
         {source.filetype === "pdf" && (
           <span> (s. {source.location.pageNr})</span>
         )}
