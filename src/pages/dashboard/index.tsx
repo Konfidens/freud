@@ -44,9 +44,8 @@ const Dashboard = ({}) => {
               setShowDetails({ ...showDetails, [idx]: false });
             }
             return (
-              <>
+              <div key={idx}>
                 <div
-                  key={"div-container-" + idx.toString()}
                   className="flex cursor-pointer items-baseline"
                   onClick={() =>
                     setShowDetails({
@@ -55,26 +54,15 @@ const Dashboard = ({}) => {
                     })
                   }
                 >
-                  <ButtonMinimal
-                    key={"button-" + idx.toString()}
-                    className="mr-2 text-xl font-bold"
-                  >
+                  <ButtonMinimal className="mr-2 text-xl font-bold">
                     {showDetails[idx] ? "-" : "+"}
                   </ButtonMinimal>
-                  <h2
-                    key={"heading-" + idx.toString()}
-                    className="mb-4 text-2xl font-bold"
-                  >
-                    {schema.class}
-                  </h2>
+                  <h2 className="mb-4 text-2xl font-bold">{schema.class}</h2>
                 </div>
                 {showDetails[idx] && (
-                  <IndexViewContainer
-                    key={"index-" + idx.toString()}
-                    weaviateClass={schema}
-                  />
+                  <IndexViewContainer weaviateClass={schema} />
                 )}
-              </>
+              </div>
             );
           })
         ) : (
