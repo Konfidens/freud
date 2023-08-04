@@ -79,7 +79,7 @@ export const weaviateRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       console.debug("Getting objects in: " + input);
       try {
-        const titles = await getDocumentsFromSchema(input);
+        const titles = await getDocumentsFromWeaviate(input);
 
         return {
           index: input,
@@ -176,6 +176,12 @@ export const weaviateRouter = createTRPCRouter({
       // Load documents
       const docs = await loadDocuments(indexName);
 
+      if (docs === undefined) {
+        throw new Error(
+          `loadDocuments() returned undefined for index ${indexName}`
+        );
+      }
+
       // Return early if no new documents
       if (docs?.length === 0) {
         console.debug(`** Ending procedure for ${indexName}`);
@@ -212,8 +218,8 @@ export const weaviateRouter = createTRPCRouter({
       } catch (error) {
         console.error(error);
       }
+      console.debug(`** Ending procedure for ${indexName}`);
     }
-    console.debug("Vector store procedure complete");
   }),
 });
 
@@ -221,7 +227,7 @@ export const weaviateRouter = createTRPCRouter({
  * Helper functions
  * - createIndex()
  * - getExistingSchemas()
- * - getDocumentsFromSchema()
+ * - getDocumentsFromWeaviate()
  * - loadDocuments()
  * - isObjectInIndex()
  * - createVectorStoreFromDocuments()
@@ -293,7 +299,7 @@ export async function getExistingSchemas() {
     });
 }
 
-async function getDocumentsFromSchema(schema: string) {
+async function getDocumentsFromWeaviate(schema: string) {
   return client.graphql
     .aggregate()
     .withClassName(schema)
@@ -324,6 +330,10 @@ async function getDocumentsFromSchema(schema: string) {
     )
     .catch((error: Error) => {
       console.error(error);
+      // It's important that this throws an error, because returning an empty array
+      // on error will potentially cause duplicate uploads of source documents
+      // to Weaviate.
+      throw new Error("Could not retrieve documents from Weaviate");
     });
 }
 
@@ -355,12 +365,47 @@ async function loadDocuments(indexName: string) {
     chunkOverlap: 200,
   });
 
-  // Retrieve the titles of the existing documents in the index
-  // Only documents with non-existing titles are added
+  /* Retrieve the titles of the existing documents in the index */
+
+  // const existingDocuments = await getDocumentsFromWeaviate(indexName);
   const existingDocuments = await getDocumentsFromPrisma(indexName);
 
+  /* - Only new documents should be uploaded to Weaviate.
+   * - This is to prevent duplicates. It's not entirely bulletproof.
+   * - It's preferably to check against Weaviate over Prisma, because an update
+   *   of an existing entry in Prisma is unproblematic.
+   * - Weaviate does not prevent duplicate uploads, so this must be prevented by us.
+   * - We assume each source document has a unique filename within its index.
+   *   -> This is reasonable because indexes are created per directory,
+   *      and a directory cannot contain multiple files with the same name.
+   *
+   * Problem 1:
+   * - Filenames are matched against the "filename" attribute in Weaviate objects
+   *   -> Each source document is typically split into ~1000 Weaviate objects
+   *   -> All objects from the same document will share the filename attribute
+   *   -> A partially uploaded file will be classified as a successful upload
+   *
+   * Problem 2:
+   * - The integrity of this setup depends on reliable filenames (i.e. no renaming)
+   *   per directory.
+   * - A document can only exist in multiple indexes if it's duplicated both
+   *   on disk and on Weaviate.
+   *   -> The latter will be a problem when performing a similarity search across multiple
+   *      indexes, since the same document is interpreted as multiple documents by
+   *      Weaviate and can be returned multiple times.
+   *
+   * Problem 3:
+   * - The function getDocumentsFromWeaviate() is prone to failing
+   *   -> I'm not sure if this is because we're on a free tier or if the it's
+   *      conducting the query in an unreasonably computationally expensive way
+   *   -> A quick fix used is to get the existing documents from Prisma after all
+   *      but this is undesirable as explained above.
+   *
+   * https://weaviate.io/developers/weaviate/manage-data/create#preventing-duplicates
+   */
+
   // Dictionary holding documents that later will be added to the Document table in Prisma
-  const insertManyDocumentData: Record<string, Prisma.DocumentCreateManyInput> =
+  const createManyDocumentData: Record<string, Prisma.DocumentCreateManyInput> =
     {};
 
   await Promise.all(
@@ -385,18 +430,18 @@ async function loadDocuments(indexName: string) {
         (key) => validKeys.includes(key) || delete document.metadata[key]
       );
 
-      const documentExistsInPrisma = existingDocuments.some(
+      const documentExists = existingDocuments?.some(
         (doc) => doc.filename === filename
       );
 
-      if (!documentExistsInPrisma) {
+      if (!documentExists) {
         try {
           // Split document
           const split = await splitter.splitDocuments([document]);
           splits.push(...split);
 
           const filetype = getFileType(filename);
-          insertManyDocumentData[filename] = {
+          createManyDocumentData[filename] = {
             index: indexName,
             filename,
             filetype,
@@ -410,7 +455,7 @@ async function loadDocuments(indexName: string) {
 
   // Insert all new documents in the "Document" Prisma table
   await prisma.document.createMany({
-    data: Object.values(insertManyDocumentData),
+    data: Object.values(createManyDocumentData),
     skipDuplicates: true,
   });
 
