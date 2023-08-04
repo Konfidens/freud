@@ -29,7 +29,7 @@ const MessageComponent = ({ message, children }: Prop) => {
       const outputlist = parts.map((part, i) => {
         // Check if part is a nubmer
         if (!isNaN(parseInt(part))) {
-          return <button style={{color: "blue"}} key={i} onClick={() => setScrollToId(parseInt(part) - 1)}> {"[" + part.toString() + "]"} </button>
+          return <button style={{ color: "blue" }} key={i} onClick={() => setScrollToId(parseInt(part) - 1)}> {"[" + part.toString() + "]"} </button>
         } else {
           if (part !== "Source ")
             return part;
@@ -71,9 +71,9 @@ const MessageComponent = ({ message, children }: Prop) => {
             {children}
             {formatLinks(message.content)}
           </div>
-          {message.sources && (
+          {message.excerpts && (
             <SourceList
-              sources={message.sources}
+              excerpts={message.excerpts}
               scrollToId={scrollToId}
               setScrollToId={setScrollToId}
             />

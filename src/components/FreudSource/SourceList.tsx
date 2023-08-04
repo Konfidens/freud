@@ -1,50 +1,56 @@
-import React from "react";
-import type { Source } from "~/interfaces/source";
+import React, { useMemo } from "react";
+import type { Excerpt } from "~/interfaces/source";
 import SourceGroup from "./SourceGroup";
 
 type Prop = {
-  sources: Source[];
+  excerpts: Excerpt[];
   scrollToId: number,
   setScrollToId: React.Dispatch<React.SetStateAction<number>>
 };
 
-const SourceList = ({ sources, scrollToId, setScrollToId }: Prop) => {
+const SourceList = ({ excerpts, scrollToId, setScrollToId }: Prop) => {
 
 
-  let sourceItemsIndex = 0
+  let excerptGroupIdx = 0
 
   let from = 0
   let to = 0
 
-  sources.sort((a, b) => 
-    a.filename.localeCompare(b.filename)
-  );
 
-  //Group sources togheter. This requires that they are sorted
-  let sourceItems: [Source[]] = [[sources[0]!]]
-  for (let i = 1; i < sources.length; i++) {
-    if (sources[i]?.filename !== sources[i - 1]?.filename!) {
-      sourceItemsIndex += 1
+  const excerptGroups = useMemo(() => {
+
+    excerpts.sort((a, b) =>
+      a.document.filename.localeCompare(b.document.filename)
+    );
+    //Group sources togheter. This requires that they are sorted
+    let excerptGroups: Excerpt[][] = []
+    for (let i = 1; i < excerpts.length; i++) {
+      if (excerpts[i]?.document.filename !== excerpts[i - 1]?.document.filename!) {
+        excerptGroupIdx += 1
+      }
+      if (!excerptGroups[excerptGroupIdx]) {
+        excerptGroups[excerptGroupIdx] = []
+      }
+      excerptGroups[excerptGroupIdx]!.push(excerpts[i]!)
     }
-    if (!sourceItems[sourceItemsIndex]) {
-      sourceItems[sourceItemsIndex] = []
-    }
-    sourceItems[sourceItemsIndex]!.push(sources[i]!)
-  }
+    return excerptGroups
+  }, [excerpts]
+
+  )
 
   return (
     <div className="mb-3 mt-5 rounded-lg p-2">
-      {sources == undefined || sources?.length == 0 ? (
+      {excerpts == undefined || excerpts?.length == 0 ? (
         <p className="bold py-2 font-bold text-yellow550">
           Fant ingen kilder til dette spørsmålet
         </p>
       ) : (
         <div>
           <p className="ml-3 text-lg font-bold">Kilder</p>
-          {sourceItems.map((sources: Source[], index) => {
+          {excerptGroups.map((excerpts: Excerpt[], index) => {
             from = to
-            to = from + sources.length
-            return <SourceGroup from={from} sources={sources} scrollToId={scrollToId} setScrollToId={setScrollToId} key={index} />
+            to = from + excerpts.length
+            return <SourceGroup from={from} excerpts={excerpts} scrollToId={scrollToId} setScrollToId={setScrollToId} key={index} />
           })}
         </div>
       )

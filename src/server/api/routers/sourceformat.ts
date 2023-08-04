@@ -3,7 +3,7 @@ import { Configuration, OpenAIApi } from "openai";
 import { boolean, string, z } from "zod";
 import { env } from "~/env.mjs";
 import { Message, Role } from "~/interfaces/message";
-import { type Source } from "~/interfaces/source";
+import { Excerpt } from "~/interfaces/source";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { Categories } from "~/types/categories";
 import { MergerRetriever } from "~/utils/weaviate/MergerRetriever";
@@ -12,6 +12,7 @@ import { getRetrieverFromIndex } from "~/utils/weaviate/getRetriever";
 import fsPromises from "fs/promises";
 import { type Document } from "langchain/dist/document";
 import path from "path";
+import { prisma } from "db";
 
 const configuration = new Configuration({
   apiKey: env.OPENAI_API_KEY,
@@ -45,7 +46,7 @@ const getStandAlone = async (
   return standaloneCompletion;
 };
 
-const getDocuments = async (standalone: string, categories: Categories) => {
+const getExcerpts = async (standalone: string, categories: Categories) => {
   const arrayOfActiveCategories: string[] = [];
   for (const key in categories) {
     if (categories[key]) {
@@ -68,18 +69,44 @@ const getDocuments = async (standalone: string, categories: Categories) => {
     SIMILARITY_THRESHOLD
   );
 
-  const documentsWithScores = await retriever.getRelevantDocumentsWithScore(
+  const weaviateExcerptsWithScore = await retriever.getRelevantDocumentsWithScore(
     standalone
   );
 
-  //TODO get title and so on
 
-  // Fredrik: commented this out because title is potentially undefined
-  // documentsWithScores.sort((a, b) => {
-  //   return a[0].metadata.title.localeCompare(b[0].metadata.title);
-  // });
+  const excerpts: Excerpt[] = []
 
-  return documentsWithScores;
+  weaviateExcerptsWithScore.forEach(async (wexcerpt) => {
+    const dbDoc = await prisma.document.findUnique(
+      {
+        where: {
+          index_filename: { index: wexcerpt[0].metadata.category, filename: wexcerpt[0].metadata.filename },
+        }
+      }
+    )
+
+    if (!dbDoc) {
+      throw new Error("dbDoc is not undefined")
+    }
+
+    const excerpt: Excerpt = {
+      //TODO change schema to use "category" and not "index"
+      document: {
+        ...dbDoc, category: dbDoc.index
+      },
+      location: {
+        lineFrom: wexcerpt[0].metadata.loc_lines_from ?? 0,
+        lineTo: wexcerpt[0].metadata.loc_lines_to ?? 0,
+      },
+      content: wexcerpt[0].pageContent,
+      score: wexcerpt[1]
+    }
+
+    excerpts.push(excerpt)
+
+  })
+
+  return excerpts;
 };
 
 const formatPrompt = (text: string, ...usedvariables: string[]) => {
@@ -90,15 +117,15 @@ const formatPrompt = (text: string, ...usedvariables: string[]) => {
 };
 
 const getResponse = async (
-  documents: Document[],
+  excerpts: Excerpt[],
   messages: { role: Role; content: string }[],
   prompt: string
 ) => {
   let stuffString = "";
 
-  documents.map((doc, index) => {
+  excerpts.forEach((excerpt, index) => {
     stuffString +=
-      "Source " + (index + 1) + ":\n---\n" + doc.pageContent + "\n---\n\n";
+      "Source " + (index + 1) + ":\n---\n" + excerpt.content + "\n---\n\n";
   });
 
   // Can either use chat (...messages) or standalone question in completion below. Chat is more robust, costs more, and reaches input-limit quicker.
@@ -161,21 +188,20 @@ export const sourceRouter = createTRPCRouter({
       }
       const timeTakenStandAlone = performance.now() - startStandAlone;
 
-      const documentswithscores = await getDocuments(
+      const excerpts = await getExcerpts(
         standalone,
         input.categories
       );
 
-      const documents = documentswithscores.map(([doc, _]) => doc);
 
-      const documentsString = documents.reduce(
+      const documentsString = excerpts.reduce(
         (accumulator, currentValue, currentIndex) => {
           return (
             accumulator +
             "Source " +
             (currentIndex + 1) +
             ":\n---\n" +
-            currentValue.pageContent +
+            currentValue.content +
             "\n---\n\n"
           );
         },
@@ -184,13 +210,13 @@ export const sourceRouter = createTRPCRouter({
 
       const qaPrompt = formatPrompt(
         input.qaPrompt ?? defaultQAPrompt,
-        documents.length.toString(),
+        excerpts.length.toString(),
         documentsString
       );
 
       const startQA = performance.now();
       const completion = await getResponse(
-        documents,
+        excerpts,
         formatedmessages,
         qaPrompt
       );
@@ -204,25 +230,10 @@ export const sourceRouter = createTRPCRouter({
         throw new Error("Response is not defined");
       }
 
-      const sources: Source[] = documentswithscores.map(([doc, score]) => {
-        return {
-          content: doc.pageContent,
-          author: doc.metadata.author ?? "",
-          category: doc.metadata.category,
-          filename: doc.metadata.filename,
-          title: doc.metadata.title ?? "",
-          location: {
-            lineFrom: doc.metadata.loc_lines_from ?? 0,
-            lineTo: doc.metadata.loc_lines_to ?? 0,
-          },
-          score: score,
-        };
-      });
-
       const reply: Message = {
         role: Role.Assistant,
         content: response,
-        sources: sources,
+        excerpts
       };
 
       const standalonePrice =

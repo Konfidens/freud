@@ -1,19 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { env } from "~/env.mjs";
-import { type Source } from "~/interfaces/source";
+import { Excerpt } from "~/interfaces/source";
 import { SourceContent } from "./SourceContent";
 
 type Prop = {
-  sources: Source[];
+  excerpts: Excerpt[];
   from: number;
   scrollToId: number;
   setScrollToId: React.Dispatch<React.SetStateAction<number>>;
 };
 
-const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
+const SourceGroup = ({ excerpts, from, scrollToId, setScrollToId }: Prop) => {
   const sourceRef = useRef<null | HTMLDivElement>(null);
-  const source = sources[0]!;
-  const to = from + sources.length;
+  const document = excerpts[0]!.document;
+  const to = from + excerpts.length; //TODO get "to" from parent
 
   const [lastSelected, setLastSelected] = useState<number>(from);
   const [open, setOpen] = useState<boolean>();
@@ -23,7 +23,7 @@ const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
       setOpen(true);
       setLastSelected(scrollToId);
       sourceRef.current.scrollIntoView({
-        // minor problem is that on first click of in-text reference, div is not open and it does not scroll completely down.
+        // TODO minor problem is that on first click of in-text reference, div is not open and it does not scroll completely down.
         behavior: "smooth",
         block: "center",
       });
@@ -41,19 +41,19 @@ const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
         onClick={(e) => setOpen(!open)}
       >
         <div>
-          {sources.length == 1 ? (
+          {excerpts.length == 1 ? (
             <span>[{from + 1}] </span>
           ) : (
             <span>
               [{from + 1} - {to}]{" "}
             </span>
           )}
-          <span className="font-bold">{source.filename}</span>
+          <span className="font-bold">{document.title} <span className="font-normal">av</span> {document.author}</span>
         </div>
         <div className="flex flex-col">
           {env.NEXT_PUBLIC_NODE_ENV == "development" &&
-            sources.map((source, idx) => {
-              return <span key={idx}>{source.score.toPrecision(3)}</span>;
+            excerpts.map((excerpt, idx) => {
+              return <span key={idx}>{excerpt.score.toPrecision(3)}</span>;
             })}
         </div>
         {/* {source.filetype === "pdf" && (
@@ -68,13 +68,12 @@ const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
       </div>
       {open && (
         <div className="flex flex-row gap-2">
-          {sources.map((_, index) => {
+          {excerpts.map((_, index) => {
             return (
               <button
                 key={index}
-                className={`${
-                  from + index == lastSelected ? "font-bold" : "font-normal"
-                }`}
+                className={`${from + index == lastSelected ? "font-bold" : "font-normal"
+                  }`}
                 onClick={(e) => {
                   setLastSelected(from + index);
                 }}
@@ -87,21 +86,7 @@ const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
       )}
       {open && (
         <SourceContent
-          category={
-            sources[lastSelected - from]?.category ?? "Klarte ikke å hente"
-          }
-          content={
-            sources[lastSelected - from]?.content ?? "Klarte ikke å hente"
-          }
-          filename={
-            sources[lastSelected - from]?.filename ?? "Klarte ikke å hente"
-          }
-          location={
-            sources[lastSelected - from]?.location ?? {
-              lineFrom: 0,
-              lineTo: 0,
-            }
-          }
+          excerpt={excerpts[lastSelected - from]}
         />
       )}
     </div>
