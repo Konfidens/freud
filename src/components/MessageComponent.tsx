@@ -16,50 +16,28 @@ const MessageComponent = ({ message, children }: Prop) => {
 
   const formatLinks = (input: string): React.JSX.Element => {
     try {
-      //Sometimes gpt wrongly outputs [Source 1] instead of [1], so we include it in regex.
-      const regex = /\[[Source 0-9]+\]/i;
+
+      const regex = /\[(Source )?(\d)\]/g;
 
       if (!regex.test(input)) {
         // If it does not contain any source references
         return <p className="whitespace-pre-wrap">{input}</p>;
       }
 
-      const goodspaces = input.replaceAll("\n", " \n");
-      const moregoodspaces = goodspaces.replaceAll("]", "] ");
+      const parts = input.split(regex);
 
-      const splittext = moregoodspaces.split(" ");
-
-      let outputlist: any[] = [];
-
-      let mystring = "";
-      splittext.map((split, idx) => {
-        if (regex.test(split.trim())) {
-          outputlist.push(mystring);
-          mystring = "";
-          for (let i = 0; i < message.sources!.length; i++) {
-            if (parseInt(split.trim().charAt(1)) == i + 1) {
-              outputlist.push(
-                <button
-                  key={idx}
-                  className="text-blue600"
-                  onClick={() => {
-                    setScrollToId(i);
-                  }}
-                >
-                  [{i + 1}]
-                </button>
-              );
-            }
-          }
+      const outputlist = parts.map((part, i) => {
+        // Check if part is a nubmer
+        if (!isNaN(parseInt(part))) {
+          return <button style={{color: "blue"}} key={i} onClick={() => setScrollToId(parseInt(part) - 1)}> {"[" + part.toString() + "]"} </button>
         } else {
-          mystring += split + " ";
+          if (part !== "Source ")
+            return part;
         }
       });
-      outputlist.push(mystring);
-
       const output = <p className="whitespace-pre-wrap">{outputlist}</p>;
-
       return output;
+
     } catch (error) {
       // Code above is bad. So if it breaks, sources wont be clickable.
       console.error(error);
