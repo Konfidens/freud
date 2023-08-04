@@ -48,7 +48,7 @@ const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
               [{from + 1} - {to}]{" "}
             </span>
           )}
-          <span className="font-bold">{source.filename}</span> av{" "}
+          <span className="font-bold">{source.filename}</span>
         </div>
         <div className="flex flex-col">
           {env.NEXT_PUBLIC_NODE_ENV == "development" &&

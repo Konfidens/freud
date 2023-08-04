@@ -16,11 +16,14 @@ const SourceList = ({ sources, scrollToId, setScrollToId }: Prop) => {
   let from = 0
   let to = 0
 
+  sources.sort((a, b) => 
+    a.filename.localeCompare(b.filename)
+  );
 
   //Group sources togheter. This requires that they are sorted
   let sourceItems: [Source[]] = [[sources[0]!]]
   for (let i = 1; i < sources.length; i++) {
-    if (sources[i]?.title !== sources[i - 1]?.title!) {
+    if (sources[i]?.filename !== sources[i - 1]?.filename!) {
       sourceItemsIndex += 1
     }
     if (!sourceItems[sourceItemsIndex]) {

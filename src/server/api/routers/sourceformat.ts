@@ -72,6 +72,8 @@ const getDocuments = async (standalone: string, categories: Categories) => {
     standalone
   );
 
+  //TODO get title and so on
+
   // Fredrik: commented this out because title is potentially undefined
   // documentsWithScores.sort((a, b) => {
   //   return a[0].metadata.title.localeCompare(b[0].metadata.title);
