@@ -6,6 +6,7 @@ import Header from "~/components/Header";
 import { api } from "~/utils/api";
 import { Icon } from "~/components/ui/icon/Icon";
 import { ButtonMinimal } from "~/components/ui/buttonMinimal/ButtonMinimal";
+import { Button } from "~/components/ui/button/Button";
 
 const Dashboard = ({}) => {
   const [vectorSchemas, setVectorSchemas] = React.useState<
@@ -23,6 +24,8 @@ const Dashboard = ({}) => {
       setVectorSchemas(data?.classes ?? null);
     },
   });
+
+  const updatemetadata = api.updatemetadata.updatemetadata.useMutation({});
 
   React.useEffect(() => {
     vectorStoreSchemas.mutate();
@@ -68,6 +71,14 @@ const Dashboard = ({}) => {
         ) : (
           <Icon name="spinner" />
         )}
+        <Button
+          className="mt-4"
+          size={"small"}
+          color={"green"}
+          onClick={() => updatemetadata.mutate()}
+        >
+          Oppdater metadata i vektordatabase
+        </Button>
       </main>
     </>
   );
