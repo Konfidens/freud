@@ -6,6 +6,7 @@ import Header from "~/components/Header";
 import { api } from "~/utils/api";
 import { Icon } from "~/components/ui/icon/Icon";
 import { ButtonMinimal } from "~/components/ui/buttonMinimal/ButtonMinimal";
+import { Button } from "~/components/ui/button/Button";
 
 const Dashboard = ({}) => {
   const [vectorSchemas, setVectorSchemas] = React.useState<
@@ -23,6 +24,8 @@ const Dashboard = ({}) => {
       setVectorSchemas(data?.classes ?? null);
     },
   });
+
+  const updatemetadata = api.updatemetadata.updatemetadata.useMutation({});
 
   React.useEffect(() => {
     vectorStoreSchemas.mutate();
@@ -44,9 +47,8 @@ const Dashboard = ({}) => {
               setShowDetails({ ...showDetails, [idx]: false });
             }
             return (
-              <>
+              <div key={idx}>
                 <div
-                  key={"div-container-" + idx.toString()}
                   className="flex cursor-pointer items-baseline"
                   onClick={() =>
                     setShowDetails({
@@ -55,31 +57,28 @@ const Dashboard = ({}) => {
                     })
                   }
                 >
-                  <ButtonMinimal
-                    key={"button-" + idx.toString()}
-                    className="mr-2 text-xl font-bold"
-                  >
+                  <ButtonMinimal className="mr-2 text-xl font-bold">
                     {showDetails[idx] ? "-" : "+"}
                   </ButtonMinimal>
-                  <h2
-                    key={"heading-" + idx.toString()}
-                    className="mb-4 text-2xl font-bold"
-                  >
-                    {schema.class}
-                  </h2>
+                  <h2 className="mb-4 text-2xl font-bold">{schema.class}</h2>
                 </div>
                 {showDetails[idx] && (
-                  <IndexViewContainer
-                    key={"index-" + idx.toString()}
-                    weaviateClass={schema}
-                  />
+                  <IndexViewContainer weaviateClass={schema} />
                 )}
-              </>
+              </div>
             );
           })
         ) : (
           <Icon name="spinner" />
         )}
+        <Button
+          className="mt-4"
+          size={"small"}
+          color={"green"}
+          onClick={() => updatemetadata.mutate()}
+        >
+          Oppdater metadata i vektordatabase
+        </Button>
       </main>
     </>
   );

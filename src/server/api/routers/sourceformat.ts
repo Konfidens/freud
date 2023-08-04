@@ -168,12 +168,18 @@ export const sourceRouter = createTRPCRouter({
         throw new Error("Question is undefined");
       }
 
-      const formatedmessages = input.messages.map((message) => {
+      let formatedmessages = input.messages.map((message) => {
         return {
           role: message.role,
           content: message.content,
         };
       });
+
+      // Test with only last 3 AI responses as to not get error at too long chat:
+      const numberOfQASentInPrompt = 3;
+      if (formatedmessages.length >= 2 * numberOfQASentInPrompt) {
+        formatedmessages = formatedmessages.slice(formatedmessages.length - 2 * numberOfQASentInPrompt, formatedmessages.length);
+      }
 
       const startStandAlone = performance.now();
       const standalonePrompt: string =

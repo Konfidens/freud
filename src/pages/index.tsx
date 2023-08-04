@@ -80,15 +80,15 @@ export default function Home() {
             >
               Diagnosis mode
             </Button>
-            {env.NEXT_PUBLIC_NODE_ENV == "development" && (
-              <VectorStoreSettings vectorStoreSchemas={fetchedCategories} />
-            )}
           </>
         </SidebarFreud>
         {/* get content in center at start */}
         <div />
         <div />
-        <Header chatStarted={messages.length > 0} diagnosismode={diagnosisMode} />
+        <Header
+          chatStarted={messages.length > 0}
+          diagnosismode={diagnosisMode}
+        />
         <Chat
           messages={messages}
           setMessages={setMessages}
