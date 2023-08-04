@@ -16,6 +16,7 @@ const MessageComponent = ({ message, children }: Prop) => {
 
   const formatLinks = (input: string): React.JSX.Element => {
     try {
+      // console.log("input: ", input);
 
       const regex = /\[(Source )?(\d)\]/g;
 
@@ -28,13 +29,14 @@ const MessageComponent = ({ message, children }: Prop) => {
 
       const outputlist = parts.map((part, i) => {
         // Check if part is a nubmer
-        if (!isNaN(parseInt(part))) {
+        if (!isNaN(parseInt(part)) && part.length <= "[#]".length) {
           return <button style={{color: "blue"}} key={i} onClick={() => setScrollToId(parseInt(part) - 1)}> {"[" + part.toString() + "]"} </button>
         } else {
           if (part !== "Source ")
             return part;
         }
       });
+      // console.log("outputlist: ", outputlist);
       const output = <p className="whitespace-pre-wrap">{outputlist}</p>;
       return output;
 
