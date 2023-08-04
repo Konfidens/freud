@@ -18,9 +18,9 @@ export const model = new ChatOpenAI({
     {
       handleLLMEnd: (output) => {
         const { completionTokens, promptTokens, totalTokens } = output.llmOutput?.tokenUsage;
-        usage.prompt_tokens += completionTokens ?? 0;
-        usage.total_tokens += promptTokens ?? 0;
-        usage.completion_tokens += totalTokens ?? 0;
+        usage.prompt_tokens = completionTokens as number ?? 0;
+        usage.total_tokens = promptTokens as number ?? 0;
+        usage.completion_tokens = totalTokens as number ?? 0;
       },
     },
   ],
