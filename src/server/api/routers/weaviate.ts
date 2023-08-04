@@ -173,55 +173,73 @@ export const weaviateRouter = createTRPCRouter({
         console.debug(`-> Index ${indexName} already exists`);
       }
 
-      // Load documents
-      const docs = await loadDocuments(indexName);
+      await updateVectorStoreIndex(indexName);
 
-      if (docs === undefined) {
-        throw new Error(
-          `loadDocuments() returned undefined for index ${indexName}`
-        );
-      }
-
-      // Return early if no new documents
-      if (docs?.length === 0) {
-        console.debug(`** Ending procedure for ${indexName}`);
-        continue;
-      }
-
-      // Create vector store from documents
-      console.debug(
-        `- Create vector store (this may take a while...) (${indexName})`
-      );
-
-      try {
-        // Max number of splits to submit to weaviate at the same time
-        // Too big of an array may cause a heap memory out of bounds issue
-        const chunkSize = 5000;
-        if (docs.length > chunkSize) {
-          console.debug(
-            " -> Many splits; submitting to Weaviate in several steps"
-          );
-          const shortArray = [];
-          for (let i = 0; i < docs.length; i += chunkSize) {
-            shortArray.push(docs.slice(i, i + chunkSize));
-          }
-          let i = 1;
-          for (const splits of shortArray) {
-            console.debug(` --> Submitting split ${i}`);
-            await createVectorStoreFromDocuments(indexName, splits, embeddings);
-            i++;
-          }
-        } else {
-          await createVectorStoreFromDocuments(indexName, docs, embeddings);
-        }
-        console.debug(`** Index ${indexName} updated`);
-      } catch (error) {
-        console.error(error);
-      }
       console.debug(`** Ending procedure for ${indexName}`);
     }
   }),
+
+  updateVectorStoreIndex: publicProcedure
+
+    .input(z.string())
+
+    .mutation(async ({ input }) => {
+      // Find existing classes
+      const existingSchemas: string[] = await getExistingSchemas();
+
+      if (!existingSchemas.includes(input)) {
+        throw new Error(`Index ${input} does not exist`);
+      }
+
+      return updateVectorStoreIndex(input);
+    }),
 });
+
+async function updateVectorStoreIndex(indexName: string) {
+  // Load documents
+  const docs = await loadDocuments(indexName);
+
+  if (docs === undefined) {
+    throw new Error(
+      `loadDocuments() returned undefined for index ${indexName}`
+    );
+  }
+
+  // Return early if no new documents
+  if (docs?.length === 0) {
+    console.debug(`** Ending procedure for ${indexName}`);
+    return;
+  }
+
+  // Create vector store from documents
+  console.debug(
+    `- Create vector store (this may take a while...) (${indexName})`
+  );
+
+  try {
+    // Max number of splits to submit to weaviate at the same time
+    // Too big of an array may cause a heap memory out of bounds issue
+    const chunkSize = 5000;
+    if (docs.length > chunkSize) {
+      console.debug(" -> Many splits; submitting to Weaviate in several steps");
+      const shortArray = [];
+      for (let i = 0; i < docs.length; i += chunkSize) {
+        shortArray.push(docs.slice(i, i + chunkSize));
+      }
+      let i = 1;
+      for (const splits of shortArray) {
+        console.debug(` --> Submitting split ${i}`);
+        await createVectorStoreFromDocuments(indexName, splits, embeddings);
+        i++;
+      }
+    } else {
+      await createVectorStoreFromDocuments(indexName, docs, embeddings);
+    }
+    console.debug(`** Index ${indexName} updated`);
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 /*
  * Helper functions
