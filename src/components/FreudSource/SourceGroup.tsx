@@ -102,6 +102,7 @@ const SourceGroup = ({ sources, from, scrollToId, setScrollToId }: Prop) => {
               lineTo: 0,
             }
           }
+          score={sources[lastSelected - from]?.score ?? 0}
         />
       )}
     </div>
